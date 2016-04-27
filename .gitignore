@@ -1,0 +1,6 @@
+*.tar.gz
+make-release.sh
+TESTS
+.svn
+.*.swp
+engines/oddcast.conf
