@@ -282,7 +282,7 @@ IVONA Cristiano22 (Portuguese)"
 		local TTS_SPEED=0
 		local TTS_LANGUAGE="$(eval ${FUNCNAME} voice $VOICE | awk -F "[()]" '{ for (i=2; i<NF; i+=2) print $i }')"
 		local TTS_VOICE="$(eval ${FUNCNAME} voice $VOICE)"
-                debug
+                #debug
 		local ENGINE_URL="http://www.fromtexttospeech.com"
 
                 local OUTPUT_FIlE="$(curl -s 'http://www.fromtexttospeech.com/' --data-urlencode "input_text=$TTS_STRING_CONTENT" --data-urlencode "language=$TTS_LANGUAGE" --data-urlencode "voice=$TTS_VOICE" --data "speed=$TTS_SPEED&action=process_text" | grep "href='/output/" | sed -n "/href='/s/.*href='\([^>]*\)'.*/\1/p")"
@@ -1180,7 +1180,9 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 
 # TODO:
 # ============================================================================
-# - fix google voice (it doesn't works any more)
+# - fix google voice again (it doesn't works any more since 2015-08-01)
+# - add support for http://drivetts.ehubsoft.net/
+# - add support for http://www.vocalware.com
 # - add support for http://www.readspeaker.com/
 # ============================================================================
 
