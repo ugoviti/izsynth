@@ -84,12 +84,19 @@ TTS_VOICE="en-gb"
 
 # realtime audio playback variables
 PLAYBACK="yes"
+
+# remove synthesized file after playback
+PLAYBACK_REMOVE="no"
+
 # play the file in background, otherwise foreground
 PLAYBACK_BACKGROUND="yes"
+
 # resynth the file if it already exist
 PLAYBACK_RESYNTH="no"
+
 # sound card playback volume
 #PLAYBACK_VOLUME="30"
+
 # command used to play the synthehtized audio file
 PLAYBACK_COMMAND="mplayer -ao alsa -really-quiet -nolirc -noconsolecontrols"
 

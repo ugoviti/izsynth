@@ -13,8 +13,8 @@
 # script variables
 NAME="izsynth"
 DESCRIPTION="TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems"
-VERSION="4.0"
-VERSION_DATE="20160427"
+VERSION="4.1"
+VERSION_DATE="20160430"
 
 #####################################
 ## default suggested user variables to change 
@@ -22,17 +22,25 @@ VERSION_DATE="20160427"
 
 # default TTS engine
 TTS_ENGINE="voicerss"
+
 # default TTS voice (null = let TTS engine to set default voice. it will use english)
 TTS_VOICE="en-us"
 
 # realtime audio playback variables
 PLAYBACK="yes"
+
+# remove synthesized file after playback
+PLAYBACK_REMOVE="no"
+
 # play the file in background, otherwise foreground
 PLAYBACK_BACKGROUND="yes"
+
 # resynth the file if it already exist
 PLAYBACK_RESYNTH="no"
+
 # sound card playback volume
 #PLAYBACK_VOLUME="30"
+
 # command used to play the synthehtized audio file
 PLAYBACK_COMMAND="mplayer -ao alsa -really-quiet -nolirc -noconsolecontrols"
 
@@ -517,6 +525,9 @@ play_file () {
 
   [ ! -z "$PLAYBACK_VOLUME" ] && PLAYBACK_COMMAND_OPTS="-volume $PLAYBACK_VOLUME"
 
+  # if we must remove the synthesized file, of course we can't remove it if PLAYBACK_BACKGROUND=yes
+  [ "$PLAYBACK_REMOVE" = "yes" ] && PLAYBACK_BACKGROUND="no"
+
   echo "Playing      - input:[$IN]"
 
   if [ "$PLAYBACK_BACKGROUND" = "yes" ]
@@ -525,6 +536,9 @@ play_file () {
     else
       $PLAYBACK_COMMAND $PLAYBACK_COMMAND_OPTS "$IN"
   fi
+
+  # if required, remove the synthesized file
+  [ "$PLAYBACK_REMOVE" = "yes" ] && echo "Removing     - input:[$IN]" && rm -f "$OUT"
 }
 
 save_file() {
@@ -1016,6 +1030,7 @@ Soundcard audio playback options:
   -x                         Playback the generated files using the soundcard speakers (current: $PLAYBACK) (otherwise assemble and save the recordings into output directory)
   -b                         Playback in background detaching the $NAME command (current: $PLAYBACK_BACKGROUND) (only if '-x' = yes)
   -W     <volume>            Change the playback soundcard output volume (current: $([ ! -z "$PLAYBACK_VOLUME" ] && echo -e -n "$PLAYBACK_VOLUME" || echo -e -n "none - use a number from 0 to 100"))
+  -r                         Remove synthesized file after playback
 
 Output file options:
   -w                         Overwrite the synthesized file, otherwise keep it (current: $PLAYBACK_RESYNTH)
@@ -1045,7 +1060,7 @@ fi
 # Note: dash (-) necessary
 
 
-while getopts "t:i:o:m:S:p:P:F:M:T:e:v:W:slLwxbhHEV" option ; do
+while getopts "t:i:o:m:S:p:P:F:M:T:e:v:W:slrLwxbhHEV" option ; do
   case $option in
     t ) # text string to synthesize
         TTS_STRING="${OPTARG}"
@@ -1099,6 +1114,9 @@ while getopts "t:i:o:m:S:p:P:F:M:T:e:v:W:slLwxbhHEV" option ; do
     W ) # change the playback volume
         PLAYBACK_VOLUME="${OPTARG}"
 	;;
+    r ) # Remove synthesized file after playback
+	PLAYBACK_REMOVE="yes"
+	;;
     w ) # overWrite the synthesized file
         [ "$PLAYBACK_RESYNTH" != "no" ] && PLAYBACK_RESYNTH="no" || PLAYBACK_RESYNTH="yes"
 	;;
@@ -1116,12 +1134,10 @@ while getopts "t:i:o:m:S:p:P:F:M:T:e:v:W:slLwxbhHEV" option ; do
         tts_engine_$TTS_ENGINE help
 	exit 0
 	;;
-
     E ) # display usage examples
         usage_examples
 	exit 0
 	;;
-
     V ) # display current version
         echo "$VERSION"
         #echo $NAME version: $VERSION released: $VERSION_DATE
@@ -1189,6 +1205,9 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 
 # ChangeLog:
 # ============================================================================
+# 4.1 - 2016XXXX
+# - added -r option for removing synthesized file after playback
+
 # 4.0 - 20160427
 # - added external engine support (put your TTS engines into $HOME/.config/izsynth/engines/YOURENGINE.conf)
 # - changed default engine to voicerss (before using it, get an APIKEY! type izsynth -H for more info)
