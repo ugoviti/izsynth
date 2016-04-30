@@ -31,7 +31,7 @@ Before installing izsynth, install the dependencies for your distribution:
 
 #### For Debian based distros (like Raspian on RaspberryPi)
 `sudo apt-get update`
-`sudo apt-get install -y sox lame mplayer curl espeak wget bsdmainutils`
+`sudo apt-get install -y sox lame mplayer curl espeak wget bsdmainutils file`
 
 For windows sapi5 support, install the `wine` package and download sapi2wav.exe:
 
