@@ -26,7 +26,7 @@ TTS_ENGINE="voicerss"
 # default TTS voice (null = let TTS engine to set default voice. it will use english)
 TTS_VOICE="en-us"
 
-# realtime audio playback variables
+# playback instead generate PBX files
 PLAYBACK="yes"
 
 # remove synthesized file after playback
@@ -92,20 +92,51 @@ IZSYNTH_CONFIG_FILE="$IZSYNTH_CONFIG_DIR/$NAME.conf"
 ###########################################################################################
 
 # START TTS ENGINES
-
 # add others TTS engines here
-tts_engines_list(){
-  print_tts_engines_table() {
-  echo "Engine            Version     Type    Provider          APIKEY  Technology  HomePage"
-  echo "----------------  ----------  ------  ----------------  ------  ----------  --------"
-  for engine in $(find "$IZSYNTH_CONFIG_DIR/engines/" -name "*.conf") ; do . $engine ; done
-  typeset -f | awk '/ \(\) $/ && !/^main / {print $1}' | grep "^tts_engine_" | sed 's/^tts_engine_//g' | while read engine
-   do
-     echo -n -e "$engine $(tts_engine_$engine description)\n"
-   done
-  }
-  print_tts_engines_table | column -c1 -t
+
+tts_engine_google() {
+  local ACTION="$1"
+  shift
+  local VOICE="$1"
+  shift
+  local IN="$1"
+  shift
+  local OUT="$1"
+
+  case $ACTION in
+        description)
+                echo "2016-05-01 Remote GoogleVoice NO Google http://translate.google.com"
+                ;;
+        help)
+                echo "this engine is limited to 160 chars max"
+                ;;
+        env)
+                # default output file format
+                TTS_EXT="mp3"
+                # default TTS voice
+                [ -z "$TTS_VOICE" ] && TTS_VOICE="en"
+                ;;
+        commands)
+                echo "curl"
+                ;;
+        voices)
+                echo "af sq ar hy az eu be bn bs bg ca ceb ny zh-CN zh-TW hr cs da nl en eo et tl fi fr gl ka de el gu ht ha iw hi hmn hu is ig id ga it ja jw kn kk km ko lo la lv lt mk mg ms ml mt mi mr mn my ne no fa pl pt ma ro ru sr st si sk sl so es su sw sv tg ta te th tr uk ur uz vi cy yi yo zu" | tr ' ' '\n'
+                ;;
+        voice)
+                eval ${FUNCNAME} voices | grep -w -- "^$VOICE$"
+                ;;
+        synthesize)
+                local TTS_STRING_CONTENT="$(urlencode "$(cat "$IN" | parse_tts_string)")"
+                local TTS_VOICE="$(eval ${FUNCNAME} voice $VOICE)"
+                curl -s -G "http://translate.google.com/translate_tts?ie=UTF-8&total=1&idx=0&client=tw-ob&&tl=$TTS_VOICE&q=$TTS_STRING_CONTENT" -A "Mozilla" --compressed -o "$OUT"
+                ;;
+        *)
+                echo "${FUNCNAME}: wrong method called - abort"
+                exit 1
+                ;;
+  esac
 }
+
 
 tts_engine_voicerss() {
   local ACTION="$1"
@@ -445,6 +476,24 @@ tts_engine_sapi5() {
 
 # END TTS ENGINES
 ###########################################################################################
+
+tts_engines_load() {
+  for engine in $(find "$IZSYNTH_CONFIG_DIR/engines/" -name "*.conf") ; do . $engine ; done
+}
+
+tts_engines_list(){
+  print_tts_engines_table() {
+  echo "Engine            Version     Type    Provider          APIKEY  Technology  HomePage"
+  echo "----------------  ----------  ------  ----------------  ------  ----------  --------"
+  tts_engines_load
+  typeset -f | awk '/ \(\) $/ && !/^main / {print $1}' | grep "^tts_engine_" | sed 's/^tts_engine_//g' | while read engine
+   do
+     echo -n -e "$engine $(tts_engine_$engine description)\n"
+   done
+  }
+  print_tts_engines_table | column -c1 -t
+}
+
 
 # urlencode <string>
 urlencode() {
@@ -1011,7 +1060,7 @@ Input/Output file management:
   -i     <file or directory> Input txt/wav/mp3 file or directory to synthesize/convert (this disable '-t' option)
   -o     <directory>         Output directory to save synthesized and assembled files (current: $OUT_DIR)
 
-Text to Speech management:
+Text To Speech management:
   -e     <engine>            TTS voice engine (current: $TTS_ENGINE)
   -v     <voice>             TTS Voice language (current: $TTS_VOICE)
   -T     <volume>            TTS volume (current: $([ ! -z "$TTS_VOLUME" ] && echo -e -n "$TTS_VOLUME" || echo -e -n "none - use a number from 0.01 to 1"))
@@ -1103,6 +1152,7 @@ while getopts "t:i:o:m:S:p:P:F:M:T:e:v:W:slrLwxbhHEV" option ; do
 	;;
     l ) # list installed TTS voice pack
 	make_tmp
+	tts_engines_load
 	check_tts_engine
         tts_engine_$TTS_ENGINE voices
 	exit 0
@@ -1206,6 +1256,7 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 # ChangeLog:
 # ============================================================================
 # 4.1 - 2016XXXX
+# - restored google tts support (limited to 160 chars max)
 # - added -r option for removing synthesized file after playback
 
 # 4.0 - 20160427
