@@ -595,10 +595,12 @@ tts_engine_sapi5() {
 # END TTS ENGINES
 ###########################################################################################
 
+# load all external engines
 tts_engines_load() {
   for engine in $(find "$IZSYNTH_CONFIG_DIR/engines/" -name "*.conf") ; do . $engine ; done
 }
 
+# list all supported engines
 tts_engines_list(){
   print_tts_engines_table() {
   echo "Engine            Version     Type    Provider          APIKEY  Technology  HomePage"
@@ -632,15 +634,16 @@ parse_tts_string() {
 }
 
 print_help_config() {
-echo "ERROR: Wrong or missing $NAME user config file.
+  echo "ERROR: Wrong or missing $NAME user config file.
 
 Step 1: Create this file: $IZSYNTH_CONFIG_FILE
 Step 2: Put into all variables you want override from the main script
 Step 3: $TTS_ENGINE specific config and variables:
 "
-tts_engine_${TTS_ENGINE[$ID]} help
+  tts_engine_${TTS_ENGINE[$ID]} help
 }
 
+# print orizontal line with the given lenght
 rulem()  {
   if [ $# -eq 0 ]; then
     echo "Usage: rulem MESSAGE WIDTH [RULE_CHARACTER]"
@@ -654,22 +657,27 @@ rulem()  {
   fi
 }
 
+# verify if the given variable is an array
 is_array() {
     [[ "$(declare -p $1 2>/dev/null)" =~ "declare -a" ]]
 }
 
+# show mime type of a file (long version)
 show_mime() {
   file --mime-type -b "$@"
 }
 
+# show mime type of a file (brief version)
 show_mime_brief() {
   file --mime-type -b "$@" | awk -F"/" '{print $1}'
 }
 
+# show size of a file
 show_size() {
   du -sh "$@" 2>/dev/null | awk '{print $1}'
 }
 
+# the name tell all :)
 synthesize_file() {
   local IN="$1"
   shift
@@ -687,6 +695,7 @@ synthesize_file() {
   fi
 }
 
+# playback the synthesized file
 play_file () {
   local IN="$1"
 
@@ -708,6 +717,7 @@ play_file () {
   [ "$PLAYBACK_REMOVE" = "yes" ] && echo "Removing     - input:[$IN]" && rm -f "$OUT"
 }
 
+# save the file in the output directory
 save_file() {
   local IN="$1"
   shift
@@ -717,6 +727,7 @@ save_file() {
   cp -f "$IN" "$OUT"
 }
 
+# convert the input file to wav format
 convert_file() {
   local IN="$1"
   shift
@@ -754,7 +765,7 @@ convert_file() {
   fi
 }
 
-
+# convert the input file to the asterisk pbx supported formats
 convert_file_pbx() {
   local IN="$1"
   shift
@@ -803,6 +814,7 @@ convert_file_pbx() {
   done
 }
 
+# remix the file adding background music and audio effects
 remix_file() {
   local IN="$1"
   shift
@@ -830,12 +842,12 @@ remix_file() {
   fi
 }
 
+# concatene all input files in a big file
 megamix_file() {
   local OUT="$1"
   sox $SOX_OPTS "${IN_FILE_MEGAMIX[@]}" "$OUT"
   echo "Megamixing   - input:[${IN_FILE_MEGAMIX[@]}] output:[$OUT] size:[$(show_size $OUT)]"
 }
-
 
 
 # temp file management
@@ -1079,6 +1091,7 @@ main() {
   # if we give a music file, or change the output volume then remix always
   [[ ! -z "$MUSIC_FILE" || ! -z "$TTS_VOLUME" ]] && REMIX="yes" || REMIX="no"
 
+  # if you pass more that one file as input then megamix them
   [[ "$MEGAMIX" != "no" && ${#IN_FILE[@]} -ge 2 ]] && REMIX="yes" && MEGAMIX="yes"
 
   # convert music file before assembling
@@ -1142,6 +1155,12 @@ echo "$NAME usage examples:
 # simple command line using script default variables (must set PLAYBACK=yes into $NAME to works)
 $NAME Hello World. This is a test message
 
+# sinthesize using standard input as source, useful when using an external command piped to $NAME
+echo \"Welcome home, sir Stark\" | $NAME -
+
+# sinthesize using standard input as source, and adding other $NAME options
+echo Good morning boss | $NAME -w -m /tmp/music.mp3 -P 10 -F 7 -
+
 # specifing engine and language and reusing the synthesized file for every run (much faster execution)
 $NAME -e "$TTS_ENGINE" -v "$TTS_VOICE" -t \"This is only a test\"
 
@@ -1174,6 +1193,7 @@ Option:  Argument:           Description:
 --------------------------------------------------------------------------------
 
 Input/Output file management:
+   -                         Synthesize using standard input
   -t     <text>              Text string to synthesize
   -i     <file or directory> Input txt/wav/mp3 file or directory to synthesize/convert (this disable '-t' option)
   -o     <directory>         Output directory to save synthesized and assembled files (current: $OUT_DIR)
@@ -1219,21 +1239,25 @@ NO_ARGS=0
 E_OPTERROR=65
 
 if [ $# -eq "$NO_ARGS" ]  # Script invoked with no command-line args?
-then
+ then
   usage
   exit $E_OPTERROR        # Exit and explain usage, if no argument(s) given.
 fi
+
 # Usage: scriptname -options
 # Note: dash (-) necessary
-
 
 while getopts "t:i:o:m:S:p:P:F:M:T:e:v:W:slrLwxbhHEV" option ; do
   case $option in
     t ) # text string to synthesize
         TTS_STRING="${OPTARG}"
+        # parse stdin if the special char - is used
+        [ "$TTS_STRING" = "-" ] && TTS_STRING="$(cat -)"
         ;;
     i ) # input file or directory to synthesize or convert (create an array with the input files path)
         IN_FILE+=("$OPTARG")
+        # parse stdin if the special char - is used
+        [ "$IN_FILE" = "-" ] && unset IN_FILE && TTS_STRING="$(cat -)"
         ;;
     o ) # output destination directory to save synthesized text
         OUT_DIR="${OPTARG}"
@@ -1321,10 +1345,11 @@ done
 # Move argument pointer to next.
 shift $(($OPTIND - 1))
 
-# parse the input stream when no options is given (only the text)
-if [[ ! -z "$*" && -z "$TTS_STRING" && -z "$IN_FILE" ]]
-  then
-    TTS_STRING="$*"
+# parse the input stream when no options are given or passed as stdin
+if [[ "$1" = "-" ]]; then
+  TTS_STRING="$(cat)"
+elif [[ ! -z "$*" && -z "$TTS_STRING" && -z "$IN_FILE" ]]; then
+  TTS_STRING="$*"
 fi
 
 main
@@ -1375,6 +1400,8 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 # 4.1 - 2016XXXX
 # - restored google tts support (limited to 160 chars max)
 # - added -r option for removing synthesized file after playback
+# - added support for stdin as input stream, example:
+#   echo this is only a test | izsynth -
 
 # 4.0 - 20160427
 # - added external engine support (put your TTS engines into $HOME/.config/izsynth/engines/YOURENGINE.conf)
