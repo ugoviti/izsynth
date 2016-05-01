@@ -120,10 +120,128 @@ tts_engine_google() {
                 echo "curl"
                 ;;
         voices)
-                echo "af sq ar hy az eu be bn bs bg ca ceb ny zh-CN zh-TW hr cs da nl en eo et tl fi fr gl ka de el gu ht ha iw hi hmn hu is ig id ga it ja jw kn kk km ko lo la lv lt mk mg ms ml mt mi mr mn my ne no fa pl pt ma ro ru sr st si sk sl so es su sw sv tg ta te th tr uk ur uz vi cy yi yo zu" | tr ' ' '\n'
+		echo "af  Afrikaans
+sq  Albanian
+am  Amharic
+ar  Arabic
+hy  Armenian
+az  Azerbaijani
+eu  Basque
+be  Belarusian
+bn  Bengali
+bh  Bihari
+bs  Bosnian
+br  Breton
+bg  Bulgarian
+km  Cambodian
+ca  Catalan
+zh-CN Chinese (Simplified)
+zh-TW Chinese (Traditional)
+co  Corsican
+hr  Croatian
+cs  Czech
+da  Danish
+nl  Dutch
+en  English
+eo  Esperanto
+et  Estonian
+fo  Faroese
+tl  Filipino
+fi  Finnish
+fr  French
+fy  Frisian
+gl  Galician
+ka  Georgian
+de  German
+el  Greek
+gn  Guarani
+gu  Gujarati
+ha  Hausa
+iw  Hebrew
+hi  Hindi
+hu  Hungarian
+is  Icelandic
+id  Indonesian
+ia  Interlingua
+ga  Irish
+it  Italian
+ja  Japanese
+jw  Javanese
+kn  Kannada
+kk  Kazakh
+rw  Kinyarwanda
+rn  Kirundi
+ko  Korean
+ku  Kurdish
+ky  Kyrgyz
+lo  Laothian
+la  Latin
+lv  Latvian
+ln  Lingala
+lt  Lithuanian
+mk  Macedonian
+mg  Malagasy
+ms  Malay
+ml  Malayalam
+mt  Maltese
+mi  Maori
+mr  Marathi
+mo  Moldavian
+mn  Mongolian
+sr-ME Montenegrin
+ne  Nepali
+no  Norwegian
+nn  Norwegian (Nynorsk)
+oc  Occitan
+or  Oriya
+om  Oromo
+ps  Pashto
+fa  Persian
+pl  Polish
+pt-BR Portuguese (Brazil)
+pt-PT Portuguese (Portugal)
+pa  Punjabi
+qu  Quechua
+ro  Romanian
+rm  Romansh
+ru  Russian
+gd  Scots Gaelic
+sr  Serbian
+sh  Serbo-Croatian
+st  Sesotho
+sn  Shona
+sd  Sindhi
+si  Sinhalese
+sk  Slovak
+sl  Slovenian
+so  Somali
+es  Spanish
+su  Sundanese
+sw  Swahili
+sv  Swedish
+tg  Tajik
+ta  Tamil
+tt  Tatar
+te  Telugu
+th  Thai
+ti  Tigrinya
+to  Tonga
+tr  Turkish
+tk  Turkmen
+tw  Twi
+ug  Uighur
+uk  Ukrainian
+ur  Urdu
+uz  Uzbek
+vi  Vietnamese
+cy  Welsh
+xh  Xhosa
+yi  Yiddish
+yo  Yoruba
+zu  Zulu"
                 ;;
         voice)
-                eval ${FUNCNAME} voices | grep -w -- "^$VOICE$"
+                eval ${FUNCNAME} voices | grep -w -- "$VOICE$" | head -n1 | awk '{print $1}'
                 ;;
         synthesize)
                 local TTS_STRING_CONTENT="$(urlencode "$(cat "$IN" | parse_tts_string)")"
@@ -1246,7 +1364,6 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 
 # TODO:
 # ============================================================================
-# - fix google voice again (it doesn't works any more since 2015-08-01)
 # - add support for http://drivetts.ehubsoft.net/
 # - add support for http://www.vocalware.com
 # - add support for http://www.readspeaker.com/
