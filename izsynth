@@ -1389,9 +1389,10 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 
 # TODO:
 # ============================================================================
-# - add support for http://drivetts.ehubsoft.net/
-# - add support for http://www.vocalware.com
-# - add support for http://www.readspeaker.com/
+# - add support for automatically no keep long synthesized sentence (>= 255 chars)
+# - find a way to split and synthesize sentence longer than the supported engine chars (splitting them and making more request to the online engine)
+# - add support for http://www.vocalware.com (investigating licence issues)
+# - add support for http://www.readspeaker.com (investigating licence issues)
 # ============================================================================
 
 
