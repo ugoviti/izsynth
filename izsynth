@@ -94,6 +94,97 @@ IZSYNTH_CONFIG_FILE="$IZSYNTH_CONFIG_DIR/$NAME.conf"
 # START TTS ENGINES
 # add others TTS engines here
 
+tts_engine_ispeech() {
+  local ACTION="$1"
+  shift
+  local VOICE="$1"
+  shift
+  local IN="$1"
+  shift
+  local OUT="$1"
+
+
+  case $ACTION in
+        description)
+                echo "2016-05-03 Remote iSpeech NO Custom http://www.ispeech.org"
+                ;;
+        help)
+                echo "this engine is limited to 160 chars max"
+                ;;
+        env)
+                # default output file format
+                TTS_EXT="mp3"
+                # default TTS voice
+                [ -z "$TTS_LANGUAGE" ] && TTS_LANGUAGE="English"
+                [ -z "$TTS_VOICE" ] && TTS_VOICE="English"
+                ;;
+        commands)
+                echo "curl"
+                ;;
+        voices)
+                # extract languages and voices list and make the output using the following command:
+		#curl -s http://www.ispeech.org/html/tts-demo.php | grep "<li class=\"voices\" id=\"" | awk -F "['']" '{print $2" "$3}' | awk -F "[><]" '{print $1" "$4}' | sed 's/&nbsp;//g' | sed 's/);"//g' | column -c1 -t
+		echo "Voice                Country     Language    Gender"
+		echo "-------------------- ----------- ----------- ------"
+		echo "usenglishfemale      US          English     Female
+usenglishmale        US          English     Male
+ukenglishfemale      UK          English     Female
+ukenglishmale        UK          English     Male
+auenglishfemale      Australian  English     Female
+usspanishfemale      US          Spanish     Female
+usspanishmale        US          Spanish     Male
+chchinesefemale      China       Chinese     Female
+hkchinesefemale      HongKong    Catonese    Female
+twchinesefemale      Taiwan      Chinese     Female
+jpjapanesefemale     Japan       Japanese    Female
+krkoreanfemale       Korea       Korean      Female
+caenglishfemale      Canadian    English     Female
+huhungarianfemale    Hungary     Hungarian   Female
+brportuguesefemale   Brazilian   Portuguese  Female
+eurportuguesefemale  European    Portuguese  Female
+eurportuguesemale    European    Portuguese  Male
+eurspanishfemale     European    Spanish     Female
+eurspanishmale       European    Spanish     Male
+eurcatalanfemale     European    Catalan     Female
+eurczechfemale       European    Czech       Female
+eurdanishfemale      European    Danish      Female
+eurfinnishfemale     European    Finnish     Female
+eurfrenchfemale      European    French      Female
+eurfrenchmale        European    French      Male
+eurnorwegianfemale   European    Norweigian  Female
+eurdutchfemale       European    Dutch       Female
+eurpolishfemale      European    Polish      Female
+euritalianfemale     European    Italian     Female
+euritalianmale       European    Italian     Male
+eurturkishfemale     European    Turkish     Female
+eurturkishmale       European    Turkish     Male
+eurgreekfemale       European    Greek       Female
+eurgermanfemale      European    German      Female
+eurgermanmale        European    German      Male
+rurussianfemale      Russia      Russian     Female
+rurussianmale        Russia      Russian     Male
+swswedishfemale      Sweden      Swedish     Female
+cafrenchfemale       Canadian    French      Female
+cafrenchmale         Canadian    French      Male
+arabicmale           Dubai       Arabic      Male"
+                ;;
+        voice)
+                eval ${FUNCNAME} voices 2>&1 | grep -F -w -- "$VOICE" | head -n1 | awk '{print $1}'
+                ;;
+        synthesize)
+                local TTS_STRING_CONTENT="$(urlencode "$(cat "$IN" | parse_tts_string)")"
+                local TTS_VOICE="$(eval ${FUNCNAME} voice $VOICE)"
+
+		curl -s "http://www.ispeech.org/p/generic/getaudio?text=$TTS_STRING_CONTENT&voice=$TTS_VOICE&speed=0&action=convert" -o "$OUT"
+                ;;
+        *)
+                echo "${FUNCNAME}: wrong method called - abort"
+                exit 1
+                ;;
+  esac
+}
+
+
 tts_engine_google() {
   local ACTION="$1"
   shift
@@ -1403,6 +1494,7 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 # - added -r option for removing synthesized file after playback
 # - added support for stdin as input stream, example:
 #   echo this is only a test | izsynth -
+# - ispeech tts engine addded (http://www.ispeech.org/)
 
 # 4.0 - 20160427
 # - added external engine support (put your TTS engines into $HOME/.config/izsynth/engines/YOURENGINE.conf)
