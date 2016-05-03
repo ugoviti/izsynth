@@ -329,10 +329,10 @@ cy  Welsh
 xh  Xhosa
 yi  Yiddish
 yo  Yoruba
-zu  Zulu"
+zu  Zulu" | sort | column -c1 -t
                 ;;
         voice)
-                eval ${FUNCNAME} voices | grep -w -- "$VOICE$" | head -n1 | awk '{print $1}'
+                eval ${FUNCNAME} voices | grep -w -- "$VOICE" | head -n1 | awk '{print $1}'
                 ;;
         synthesize)
                 local TTS_STRING_CONTENT="$(urlencode "$(cat "$IN" | parse_tts_string)")"
