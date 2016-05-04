@@ -775,13 +775,17 @@ synthesize_file() {
   local OUT="$1"
 
   # tts_engine_* destination_file 
+  echo -e -n "Synthetizing - input:[$IN] engine:[${TTS_ENGINE[$ID]}] voice:["${TTS_VOICE[$ID]}"] output:[$OUT] "
+
   tts_engine_${TTS_ENGINE[$ID]} synthesize "${TTS_VOICE[$ID]}" "$IN" "$OUT"
+
+  echo -e -n "size:[$(show_size "$OUT")] type:[$(show_mime "$OUT")] result:"
 
   if [[ $? = 0 && "$(show_mime_brief "$OUT")" == "audio" ]]
     then
-      echo "Synthetizing - input:[$IN] engine:[${TTS_ENGINE[$ID]}] voice:["${TTS_VOICE[$ID]}"] output:[$OUT] size:[$(show_size "$OUT")] type:[$(show_mime "$OUT")] result:[SUCCESS]"
+      echo -e -n "[SUCCESS]\n"
     else
-      echo "Synthetizing - input:[$IN] engine:[${TTS_ENGINE[$ID]}] voice:["${TTS_VOICE[$ID]}"] output:[$OUT] size:[$(show_size "$OUT")] type:[$(show_mime "$OUT")] result:[ERROR]"
+      echo -e -n "[ERROR]\n"
       exit 1
   fi
 }
@@ -1127,12 +1131,19 @@ assemble_file() {
 
       #local TTS_FILE="$TMP_DIR/${TTS_ENGINE[$ID]}-${TTS_VOICE[$ID]}-$(print_name $IN).$TTS_EXT"
       local TTS_FILE="$TMP_DIR/$(print_name $IN).$TTS_EXT"
-      synthesize_file "$IN" "$TTS_FILE"
+      if [[ "$REMIX" = "yes" || "$PLAYBACK" = "no" ]]; then
+        synthesize_file "$IN" "$TTS_FILE"
+       else
+        # to speed up the playback process don't convert and use the wav version, directly use the tts_engine encoding instead
+        synthesize_file "$IN" "$OUT"
+      fi
       IN="$TTS_FILE"
       ;;
   esac
 
-  case "$(print_ext $IN)" in
+  # to speed up the playback process don't convert and use the wav version, directly use the tts_engine encoding instead
+  if [[ "$REMIX" = "yes" || "$PLAYBACK" = "no" ]]; then
+   case "$(print_ext $IN)" in
     txt|wav|mp3)
       # convert and normalize all given files
       convert_file "$IN" "$OUT_TMP"
@@ -1159,7 +1170,8 @@ assemble_file() {
       echo "ERROR: Invalid file extension found: $(print_ext $IN) input:[$IN]"
       exit 1
       ;;
-  esac
+   esac
+  fi
 }
 
 # all begin here
@@ -1196,8 +1208,16 @@ main() {
   if [ "$MEGAMIX" != "yes" ] ; then
    ID=1 ; for IN in "${IN_FILE[@]}"; do
     #debug
+
     rulem " [$ID/${#IN_FILE[@]}] - $NAME Name:[$(print_name $IN)] " = 80
-    [ "$PLAYBACK" = "yes" ] && local OUT="$OUT_DIR/$(print_name $IN).wav" || local OUT="$TMP_DIR/$(print_name $IN).wav"
+
+    if   [ "$PLAYBACK" = "yes" ]; then
+      # to speed up the playback process don't convert and use the wav version, directly use the tts_engine encoding instead
+      [ "$REMIX" = "yes" ] && local OUT="$OUT_DIR/$(print_name $IN).wav" || local OUT="$OUT_DIR/$(print_name $IN).$TTS_EXT"
+     else
+      local OUT="$TMP_DIR/$(print_name $IN).wav"
+    fi
+
     if [[ -e "$OUT" && "$PLAYBACK_RESYNTH" = "no" ]]
       then
         echo "File exist   - input:[$OUT]"
@@ -1207,8 +1227,8 @@ main() {
       else
         assemble_file "$IN" "$OUT"
     fi
-    if [ "$PLAYBACK" = "yes" ]
-      then
+
+    if  [ "$PLAYBACK" = "yes" ]; then
         play_file "$OUT"
       else
         convert_file_pbx "$OUT" "$OUT_DIR"
@@ -1218,8 +1238,10 @@ main() {
    done
   else
    #debug
+
    # the megamix file name is always taken from the first input name
    [ "$PLAYBACK" = "yes" ] && local OUT_MEGAMIX="$OUT_DIR/$(print_name ${IN_FILE[1]}).wav" || local OUT_MEGAMIX="$TMP_DIR/$(print_name ${IN_FILE[1]}).wav"
+
    if [[ ! -e "$OUT_MEGAMIX" || "$PLAYBACK_RESYNTH" = "yes" ]]
       then
         # remix all given files in one big file
@@ -1231,6 +1253,7 @@ main() {
         done
    fi
    #debug
+
    if [ "$PLAYBACK" = "yes" ]
     then
      play_file "$OUT_MEGAMIX"
@@ -1490,6 +1513,8 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 # ChangeLog:
 # ============================================================================
 # 4.1 - 2016XXXX
+# - speedup the synthesizingprocess avoiding intermediate convertion to wav format when not remizing o megamixing
+# - more intuitive feedback when synthesizing
 # - changed default engine to 'naturalreaders' and voice 'Peter' (english language)
 # - restored google tts support (limited to 160 chars max)
 # - added -r option for removing synthesized file after playback
