@@ -1578,7 +1578,6 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 # TODO:
 # ============================================================================
 # - add support for automatically no keep long synthesized sentence (>= 255 chars)
-# - find a way to split and synthesize sentence longer than the supported engine chars (splitting them and making more request to the online engine)
 # - add support for http://www.vocalware.com (investigating licence issues)
 # - add support for http://www.readspeaker.com (investigating licence issues)
 # - add support for http://www.acapela-group.com (investigating licence issues)
@@ -1588,7 +1587,8 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 # ChangeLog:
 # ============================================================================
 # 4.1 - 20160509
-# - added support for auto-splitting input text depending of engine used (each limited engine now have a TTS_LENGTH variable). This feature make possible to sinth very long sentences
+# - added support for auto splitting sentences longer than the supported engine chars
+#   each engine now have a TTS_LENGTH variable if engine usage is limited. This feature make possible to sinth very long sentences
 # - speedup the synthesizing process avoiding intermediate convertion to wav format when not remizing o megamixing (this gained 500ms in 4 seconds playback)
 # - more intuitive feedback when synthesizing
 # - changed default engine to 'naturalreaders' and voice 'Peter' (english language)
