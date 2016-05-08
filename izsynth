@@ -14,7 +14,7 @@
 NAME="izsynth"
 DESCRIPTION="TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems"
 VERSION="4.1"
-VERSION_DATE="20160430"
+VERSION_DATE="20160509"
 
 #####################################
 ## default suggested user variables to change 
@@ -114,6 +114,8 @@ tts_engine_ispeech() {
         env)
                 # default output file format
                 TTS_EXT="mp3"
+		# default max allowed chars
+		TTS_LENGTH="150"
                 # default TTS voice
                 [ -z "$TTS_LANGUAGE" ] && TTS_LANGUAGE="English"
                 [ -z "$TTS_VOICE" ] && TTS_VOICE="English"
@@ -204,6 +206,8 @@ tts_engine_google() {
         env)
                 # default output file format
                 TTS_EXT="mp3"
+		# default max allowed chars
+		TTS_LENGTH="150"
                 # default TTS voice
                 [ -z "$TTS_VOICE" ] && TTS_VOICE="en"
                 ;;
@@ -724,6 +728,12 @@ parse_tts_string() {
   tr '\n' ' ' | sed 's/  \+/ /g' | sed 's/^[ \t]*//;s/[ \t]*$//'
 }
 
+# because some engines allow only limited string length, we must count how many chars we have and pass only the max allowed to the engine
+count_chars() {
+  tr -d '[:space:]' | wc -c
+}
+
+
 print_help_config() {
   echo "ERROR: Wrong or missing $NAME user config file.
 
@@ -1007,6 +1017,12 @@ check_env() {
      SOX_OPTS="-G"
   fi
 
+  # load any external TTS engines
+  [ -e "$IZSYNTH_CONFIG_DIR/engines/$TTS_ENGINE.conf" ] && . "$IZSYNTH_CONFIG_DIR/engines/$TTS_ENGINE.conf"
+
+  # import global tts_engine variables
+  tts_engine_$TTS_ENGINE env #>/dev/null 2>&1
+
   # set default variables
   [ -z "$PLAYBACK_RESYNTH" ] && PLAYBACK_RESYNTH="yes"
 
@@ -1014,10 +1030,7 @@ check_env() {
   [[ -z "${TTS_STRING}" &&   -z "${IN_FILE}" ]] && echo "ERROR: no text STRING/FILE/DIRECTORY specified, use '-t' or '-i' option - abort." >&2 && exit 1
 
   # make an input file where paste the given text string
-  #[ -n "$TTS_STRING" ] &&  IN_FILE_ARRAY=("$TMP_DIR/$(echo "$TTS_STRING" | sed -e 's/[^A-Za-z0-9_-]/_/g').txt") && echo "$TTS_STRING" > "${IN_FILE_ARRAY}"
-  # show array content
-  #declare -p IN_FILE_ARRAY
-  [ -n "$TTS_STRING" ] &&  IN_FILE=("$TMP_DIR/$(echo "$TTS_STRING" | sed -e 's/[^A-Za-z0-9_-]/_/g').txt") && echo "$TTS_STRING" > "${IN_FILE}"
+  [ -n "$TTS_STRING" ] &&  IN_FILE=("$TMP_DIR/$(echo "$TTS_STRING" | sed -e 's/[^A-Za-z0-9_-]/_/g').txt") && echo "$TTS_STRING" > "$IN_FILE"
 
   #if is_array IN_FILE ; then echo IN_FILE è un array; fi
   #[[ -z "${TTS_STRING}" && ! -f "${IN_FILE}" && ! -d "${IN_FILE}" ]] && echo "ERROR: ${IN_FILE}: invalid input file/directory - abort." >&2 && exit 1
@@ -1025,22 +1038,30 @@ check_env() {
   # if input file is a directory then process all files creating the main array
   if [ -d "${IN_FILE}" ]
     then
+      # when input is a directory we never magamixing
       MEGAMIX="no"
       IN_FILE_ARRAY=($(find "$IN_FILE" -maxdepth 1 -type f))
     else
       # parse IN_FILE array and recreate special variables
-      IN_FILE_ARRAY="${IN_FILE[@]}"
+      IN_FILE_ARRAY=("${IN_FILE[@]}")
   fi
 
+  # destroy IN_FILE and recreate the array
+  #echo IN_FILE_ARRAY=${IN_FILE_ARRAY[*]}
   unset IN_FILE
-  ID=1 ; for IN in ${IN_FILE_ARRAY[@]}; do
+
+  # recreate the array parsing the command line
+  ID=0 ; for IN in ${IN_FILE_ARRAY[@]}; do
+   let ID+=1
    if echo "$IN" | grep ":" >/dev/null 2>&1
     then
+     # parse input files when provided with megamix syntax
      TTS_ENGINE[$ID]="$(echo "$IN" | awk -F ":" '{print $1}')"
      TTS_VOICE[$ID]="$(echo "$IN" | awk -F ":" '{print $2}')"
      IN_FILE[$ID]="$(echo "$IN" | awk -F ":" '{print $3}')"
      #echo ID: $ID - ${IN_FILE[$ID]}
     else
+     # parse input files when provided with default syntax
      TTS_ENGINE[$ID]="$TTS_ENGINE"
      TTS_VOICE[$ID]="$TTS_VOICE"
      IN_FILE[$ID]="$IN"
@@ -1048,13 +1069,53 @@ check_env() {
 
    # verify if the specified input file exist
    [ ! -e "${IN_FILE[$ID]}" ] && echo "ERROR: '${IN_FILE[$ID]}' invalid input file/directory - abort." >&2 && exit 1
-
-   let ID+=1
   done
 
-  #echo ${#IN_FILE[@]}
-  #echo ${IN_FILE[*]}
+  # recreate the array if the engine have chars limit, splitting the input file into many sub files
+  if [ ! -z "$TTS_LENGTH" ]; then
+     #for ((ID=1;ID<=${#IN_FILE[@]};ID++)); do
+     ID=0 ; for IN in ${IN_FILE[@]}; do
+      if [ "$(print_ext $IN)" = "txt" ]; then
+       let ID+=1
+       # destroy the original input file and use the splitted version
+       unset IN_FILE[$ID]
+       #echo
+       #echo ID=$ID IN_FILE=${IN_FILE[@]}
+       #echo ID=$ID IN_FILE_ARRAY=${IN_FILE_ARRAY[@]}
+       if [ $(cat "$IN" | parse_tts_string | count_chars) -ge $TTS_LENGTH ]; then
+         MEGAMIX="yes"
+         split_tts_file "$IN" $ID
+        else
+         TTS_ENGINE[$ID]="${TTS_ENGINE[$ID]}"
+         TTS_VOICE[$ID]="${TTS_VOICE[$ID]}"
+         IN_FILE_SPLIT+=($IN)
+       fi
+      fi
+    done
+
+    # recreate again the array with all engines, voices and splitted input files
+    if [ ! -z "${IN_FILE_SPLIT[*]}" ]; then
+     ID=0 ; for IN in ${IN_FILE_SPLIT[@]}; do
+      let ID+=1
+       # fix me, this doesn't works very well when using the special input file filter: engine:voice:file
+       [ -z "${TTS_ENGINE[$ID]}" ] && TTS_ENGINE[$ID]="$TTS_ENGINE"
+       [ -z "${TTS_VOICE[$ID]}" ] && TTS_VOICE[$ID]="$TTS_VOICE"
+       IN_FILE[$ID]="$IN"
+     done
+    fi
+  fi
+
+  #echo IN_FILE_SPLIT[@] = ${IN_FILE_SPLIT[@]}
+  #echo       IN_FILE[@] = ${IN_FILE[@]}
+
+  #exit
+
   #debug
+  #echo ${#IN_FILE[@]}
+  #echo ${IN_FILE[@]}
+  #echo ${IN_FILE[*]}
+  #echo ${IN_FILE}
+  #echo ${TTS_ENGINE[*]}
   #exit 1
 
   # verify if a music file is given and the file exist
@@ -1068,6 +1129,30 @@ check_env() {
   [ -z "${OUT_DIR}" ] && OUT_DIR="$TMP_DIR_BASE" && echo "INFO: no output directory specified, redirecting playback to system soundcard"
   [ ! -d "${OUT_DIR}" ] && echo "ERROR: invalid output directory specified: '${OUT_DIR}' - abort."      >&2 && exit 1
   [ ! -w "${OUT_DIR}" ] && echo "ERROR: not writable output directory specified: '${OUT_DIR}' - abort." >&2 && exit 1
+
+  # if we give a music file, or change the output volume then remix always
+  [[ ! -z "$MUSIC_FILE" || ! -z "$TTS_VOLUME" ]] && REMIX="yes" || REMIX="no"
+
+  # if you pass more that one file as input then megamix them
+  [[ "$MEGAMIX" != "no" && ${#IN_FILE[@]} -ge 2 ]] && REMIX="yes" && MEGAMIX="yes"
+
+}
+
+split_tts_file() {
+  local IN="$1"
+  shift
+  local ID="$1"
+
+  SID=0 ; while read string ; do
+   let SID+=1
+   TTS_ENGINE[$SID]="${TTS_ENGINE[$ID]}"
+   TTS_VOICE[$SID]="${TTS_VOICE[$ID]}"
+   local IN_FILE_SPLIT_TMP="$TMP_DIR/$(print_name "$IN")-$SID.$(print_ext "$IN")"
+   IN_FILE_SPLIT+=($IN_FILE_SPLIT_TMP)
+   #echo -e -n "$IN_FILE_SPLIT_TMP " ; echo $string 
+   echo $string > "$IN_FILE_SPLIT_TMP"
+  done < <(echo -e -n "$(cat "$IN" | parse_tts_string | fold -sw $TTS_LENGTH)\n")
+  #debug
 }
 
 # file name manupilation
@@ -1098,16 +1183,18 @@ IN_FILE_MEGAMIX ARRAY ALL VALUES  = ${IN_FILE_MEGAMIX[@]}
 
 other variables: 
 ================
-         PWD=$PWD
-          IN=$IN
-         OUT=$OUT
-TTS_LANGUAGE=$TTS_LANGUAGE
-   TTS_VOICE=$TTS_VOICE
-     IN_FILE=$IN_FILE
-    OUT_FILE=$OUT_FILE
-     OUT_PBX=$OUT_PBX
-     OUT_DIR=$OUT_DIR
-       REMIX=$REMIX
+     TMP_DIR = $TMP_DIR
+         PWD = $PWD
+          IN = $IN
+         OUT = $OUT
+TTS_LANGUAGE = $TTS_LANGUAGE
+   TTS_VOICE = $TTS_VOICE
+     IN_FILE = $IN_FILE
+    OUT_FILE = $OUT_FILE
+     OUT_PBX = $OUT_PBX
+     OUT_DIR = $OUT_DIR
+       REMIX = $REMIX
+     MEGAMIX = $MEGAMIX
 "
 }
 
@@ -1185,18 +1272,6 @@ main() {
   # verify the enveropment if all is good before starting conversion
   check_env
 
-  # load any external TTS engines
-  [ -e "$IZSYNTH_CONFIG_DIR/engines/$TTS_ENGINE.conf" ] && . "$IZSYNTH_CONFIG_DIR/engines/$TTS_ENGINE.conf"
-
-  # import global tts_engine variables
-  tts_engine_$TTS_ENGINE env >/dev/null 2>&1
-
-  # if we give a music file, or change the output volume then remix always
-  [[ ! -z "$MUSIC_FILE" || ! -z "$TTS_VOLUME" ]] && REMIX="yes" || REMIX="no"
-
-  # if you pass more that one file as input then megamix them
-  [[ "$MEGAMIX" != "no" && ${#IN_FILE[@]} -ge 2 ]] && REMIX="yes" && MEGAMIX="yes"
-
   # convert music file before assembling
   if [[ ! -z "$MUSIC_FILE" && "$(print_ext $MUSIC_FILE)" != "wav" ]]
    then
@@ -1206,7 +1281,8 @@ main() {
 
   # assemble all given files processing array contents
   if [ "$MEGAMIX" != "yes" ] ; then
-   ID=1 ; for IN in "${IN_FILE[@]}"; do
+   ID=0 ; for IN in "${IN_FILE[@]}"; do
+    let ID+=1
     #debug
 
     rulem " [$ID/${#IN_FILE[@]}] - $NAME Name:[$(print_name $IN)] " = 80
@@ -1234,22 +1310,20 @@ main() {
         convert_file_pbx "$OUT" "$OUT_DIR"
     fi
     rulem " [$ID/${#IN_FILE[@]}] " - 80
-    let ID+=1
    done
   else
    #debug
-
    # the megamix file name is always taken from the first input name
    [ "$PLAYBACK" = "yes" ] && local OUT_MEGAMIX="$OUT_DIR/$(print_name ${IN_FILE[1]}).wav" || local OUT_MEGAMIX="$TMP_DIR/$(print_name ${IN_FILE[1]}).wav"
 
    if [[ ! -e "$OUT_MEGAMIX" || "$PLAYBACK_RESYNTH" = "yes" ]]
       then
         # remix all given files in one big file
-        ID=1 ; for IN in "${IN_FILE[@]}"; do
+        ID=0 ; for IN in "${IN_FILE[@]}"; do
+         let ID+=1
          rulem " [$ID/${#IN_FILE[@]}] - $NAME Name:[$(print_name $IN)] == MEGAMIX " = 80
          assemble_file "$IN" "$OUT_MEGAMIX"
          rulem " [$ID/${#IN_FILE[@]}] " - 80
-         let ID+=1
         done
    fi
    #debug
@@ -1270,7 +1344,7 @@ echo "$NAME usage examples:
 $NAME Hello World. This is a test message
 
 # sinthesize using standard input as source, useful when using an external command piped to $NAME
-echo \"Welcome home, sir Stark\" | $NAME -
+echo \"Welcome home, mr Stark\" | $NAME -
 
 # sinthesize using standard input as source, and adding other $NAME options
 echo Good morning boss | $NAME -w -m /tmp/music.mp3 -P 10 -F 7 -
@@ -1507,12 +1581,14 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 # - find a way to split and synthesize sentence longer than the supported engine chars (splitting them and making more request to the online engine)
 # - add support for http://www.vocalware.com (investigating licence issues)
 # - add support for http://www.readspeaker.com (investigating licence issues)
+# - add support for http://www.acapela-group.com (investigating licence issues)
 # ============================================================================
 
 
 # ChangeLog:
 # ============================================================================
-# 4.1 - 2016XXXX
+# 4.1 - 20160509
+# - added support for auto-splitting input text depending of engine used (each limited engine now have a TTS_LENGTH variable). This feature make possible to sinth very long sentences
 # - speedup the synthesizing process avoiding intermediate convertion to wav format when not remizing o megamixing (this gained 500ms in 4 seconds playback)
 # - more intuitive feedback when synthesizing
 # - changed default engine to 'naturalreaders' and voice 'Peter' (english language)

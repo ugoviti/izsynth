@@ -45,7 +45,8 @@ Download latest stable version of izSynth package from http://www.initzero.it/pr
 
 **Development Release**
 
-`wget https://raw.githubusercontent.com/ugoviti/izsynth/master/izsynth -O /usr/local/bin/izsynth && chmod 755 /usr/local/bin/izsynth`
+`cd /usr/local`
+`wget https://raw.githubusercontent.com/ugoviti/izsynth/master/izsynth -O izsynth && chmod 755 izsynth`
 
 ## USAGE
 ### Command line
@@ -54,7 +55,7 @@ Before using izsynth, we must configure and try it via command line.
 
 Make a quick test with the following command:
 
-`izsynth -e voicerss -v en-gb -t "Welcome home, sir Stark"`
+`izsynth -e naturalreaders -v Peter -t "Welcome home, mr Stark"`
 
 **NB.** Some engines, like **voicerss**, need an **APY KEY** before you can use it, follow the onscreen guide to get your APY KEY:
 
@@ -78,10 +79,10 @@ create the following config file: `$HOME/.config/izsynth/izsynth.conf`
 VOICERSS_APIKEY=your_apy_key_hash_go_here
 
 # default tts engine
-TTS_ENGINE="voicerss"
+TTS_ENGINE="naturalreaders"
 
 # default tts voice (null = let tts engine to set default voice. it will use english)
-TTS_VOICE="en-gb"
+TTS_VOICE="Peter"
 
 # realtime audio playback variables
 PLAYBACK="yes"
