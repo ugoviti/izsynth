@@ -13,8 +13,8 @@
 # script variables
 NAME="izsynth"
 DESCRIPTION="TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems"
-VERSION="4.1"
-VERSION_DATE="20160509"
+VERSION="4.2"
+VERSION_DATE="20160510"
 
 #####################################
 ## default suggested user variables to change 
@@ -507,24 +507,7 @@ tts_engine_fromtexttospeech() {
 		echo "curl"
 		;;
 	voices)
-		echo "IVONA Amy22 (UK English)
-IVONA Brian22 (UK English)
-IVONA CΘline22 (French)
-IVONA Mathieu22 (French)
-IVONA Mathieu22 (French)
-IVONA Hans22 (German)
-IVONA Maxim22 (Russian)
-IVONA Tatyana22 (Russian)
-IVONA Eric22
-IVONA Jennifer22
-IVONA Joey22
-IVONA Kimberly22
-IVONA Salli22
-IVONA Giorgio22 (Italian)
-IVONA Carla22 (Italian)
-IVONA Conchita22 (Spanish [Modern])
-IVONA Enrique22 (Spanish [Modern])
-IVONA Cristiano22 (Portuguese)"
+                curl -s http://www.fromtexttospeech.com | grep "voice_indexes\['" | awk -F = '{print $2}' | sed '/^$/d' | sed "s/ '//" | sed "s/';//"
 		;;
         voice)
 		eval ${FUNCNAME} voices 2>&1 | grep -F -w -- "$VOICE" | head -n1 | tr -d [:cntrl:] | awk -F: '{print $1}'
@@ -1030,7 +1013,7 @@ check_env() {
   [[ -z "${TTS_STRING}" &&   -z "${IN_FILE}" ]] && echo "ERROR: no text STRING/FILE/DIRECTORY specified, use '-t' or '-i' option - abort." >&2 && exit 1
 
   # make an input file where paste the given text string
-  [ -n "$TTS_STRING" ] &&  IN_FILE=("$TMP_DIR/$(echo "$TTS_STRING" | sed -e 's/[^A-Za-z0-9_-]/_/g').txt") && echo "$TTS_STRING" > "$IN_FILE"
+  [ -n "$TTS_STRING" ] &&  IN_FILE=("$TMP_DIR/$(echo "$TTS_STRING" | sed -e 's/[^A-Za-z0-9_-]/_/g' | cut -c-64).txt") && echo "$TTS_STRING" > "$IN_FILE"
 
   #if is_array IN_FILE ; then echo IN_FILE è un array; fi
   #[[ -z "${TTS_STRING}" && ! -f "${IN_FILE}" && ! -d "${IN_FILE}" ]] && echo "ERROR: ${IN_FILE}: invalid input file/directory - abort." >&2 && exit 1
@@ -1586,6 +1569,10 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 
 # ChangeLog:
 # ============================================================================
+# 4.2 - 2016XXXX
+# - don't create tts files name longer than 64 chars
+# - dynamic voices listing for fromtexttospeech engine (not more static list)
+
 # 4.1 - 20160509
 # - added support for auto splitting sentences longer than the supported engine chars
 #   each engine now have a TTS_LENGTH variable if engine usage is limited. This feature make possible to sinth very long sentences
