@@ -1054,6 +1054,7 @@ check_env() {
    [ ! -e "${IN_FILE[$ID]}" ] && echo "ERROR: '${IN_FILE[$ID]}' invalid input file/directory - abort." >&2 && exit 1
   done
 
+  # TTS_LENGTH auto splitting feature
   # recreate the array if the engine have chars limit, splitting the input file into many sub files
   if [ ! -z "$TTS_LENGTH" ]; then
      #for ((ID=1;ID<=${#IN_FILE[@]};ID++)); do
@@ -1065,7 +1066,8 @@ check_env() {
        #echo
        #echo ID=$ID IN_FILE=${IN_FILE[@]}
        #echo ID=$ID IN_FILE_ARRAY=${IN_FILE_ARRAY[@]}
-       if [ $(cat "$IN" | parse_tts_string | count_chars) -ge $TTS_LENGTH ]; then
+       TTS_LENGTH_CUR="$(cat "$IN" | parse_tts_string | count_chars)"
+       if [ $TTS_LENGTH_CUR -ge $TTS_LENGTH ]; then
          MEGAMIX="yes"
          split_tts_file "$IN" $ID
         else
@@ -1125,6 +1127,8 @@ split_tts_file() {
   local IN="$1"
   shift
   local ID="$1"
+
+  echo "INFO: Maximun allowed chars reached for engine ${TTS_ENGINE[$ID]}. allowed:$TTS_LENGTH - current:$TTS_LENGTH_CUR"
 
   SID=0 ; while read string ; do
    let SID+=1
