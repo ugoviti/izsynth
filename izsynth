@@ -14,7 +14,7 @@
 NAME="izsynth"
 DESCRIPTION="TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems"
 VERSION="4.2"
-VERSION_DATE="20160510"
+VERSION_DATE="20160524"
 
 #####################################
 ## default suggested user variables to change 
@@ -727,7 +727,7 @@ Step 3: $TTS_ENGINE specific config and variables:
   tts_engine_${TTS_ENGINE[$ID]} help
 }
 
-# print orizontal line with the given lenght
+# print orizontal line with the given length
 rulem()  {
   if [ $# -eq 0 ]; then
     echo "Usage: rulem MESSAGE WIDTH [RULE_CHARACTER]"
@@ -771,16 +771,11 @@ synthesize_file() {
   echo -e -n "Synthetizing - input:[$IN] engine:[${TTS_ENGINE[$ID]}] voice:["${TTS_VOICE[$ID]}"] output:[$OUT] "
 
   tts_engine_${TTS_ENGINE[$ID]} synthesize "${TTS_VOICE[$ID]}" "$IN" "$OUT"
+  local RETVAL=$?
 
   echo -e -n "size:[$(show_size "$OUT")] type:[$(show_mime "$OUT")] result:"
 
-  if [[ $? = 0 && "$(show_mime_brief "$OUT")" == "audio" ]]
-    then
-      echo -e -n "[SUCCESS]\n"
-    else
-      echo -e -n "[ERROR]\n"
-      exit 1
-  fi
+  if [[ $RETVAL = 0 && "$(show_mime_brief "$OUT")" == "audio" ]]; then echo -e -n "[SUCCESS]\n" ; else echo -e -n "[ERROR]\n" ; exit 1; fi
 }
 
 # playback the synthesized file
@@ -838,7 +833,7 @@ convert_file() {
   local IN_SR="$(soxi -r $IN)"
   if [ "$IN_SR" != 44100 ]
     then
-      # change the destination file because decome 44100hz frequency
+      # change the destination file because become 44100hz frequency
       OUT="$(print_path $OUT)/$(print_name $OUT)-44khz.wav"
       # convert to wav 44100 hz the wav file
       sox $SOX_OPTS "$IN" -r 44100 "$OUT"
@@ -920,17 +915,22 @@ remix_file() {
   if [ ! -z "$MUSIC_FILE" ]
     then
       let local TTS_PAD_BEGIN_REAL="$MUSIC_START+$TTS_PAD_BEGIN"
+      echo -e -n "Remixing     - input:[$IN] music:[$MUSIC_FILE] music_volume:[$MUSIC_VOLUME] tts_volume:[$TTS_VOLUME] output:[$OUT] "
       # mix tts voice with background music
       sox -V1 $SOX_OPTS_MUSIC -m "$MUSIC_FILE" "| sox $SOX_OPTS $IN -p pad $TTS_PAD_BEGIN_REAL" "$OUT" trim $MUSIC_START fade h $MUSIC_FADE $IN_DURATION $MUSIC_FADE remix 1
-      echo "Remixing     - input:[$IN] music:[$MUSIC_FILE] music_volume:[$MUSIC_VOLUME] tts_volume:[$TTS_VOLUME] output:[$OUT] size:[$(show_size $OUT)] duration:[$IN_DURATION]"
+      local RETVAL=$?
+      echo -e -n "size:[$(show_size $OUT)] duration:[$IN_DURATION] result:"
     else
+      echo -e -n "Remixing     - input:[$IN] tts_volume:[$TTS_VOLUME] output:[$OUT] "
       # remix without background music
       sox -V1 $SOX_OPTS "$IN" "$OUT" remix 1
-      echo "Remixing     - input:[$IN] tts_volume:[$TTS_VOLUME] output:[$OUT] size:[$(show_size $OUT)]"
+      local RETVAL=$?
+      echo -e -n "size:[$(show_size $OUT)] duration:[$IN_DURATION] result:"
   fi
+  if [ $RETVAL = 0 ]; then echo -e -n "[SUCCESS]\n" ; else echo -e -n "[ERROR]\n" ; exit 1; fi
 }
 
-# concatene all input files in a big file
+# concatenate all input files in a big file
 megamix_file() {
   local OUT="$1"
   sox $SOX_OPTS "${IN_FILE_MEGAMIX[@]}" "$OUT"
@@ -1573,9 +1573,10 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 
 # ChangeLog:
 # ============================================================================
-# 4.2 - 2016XXXX
+# 4.2 - 20160524
 # - don't create tts files name longer than 64 chars
 # - dynamic voices listing for fromtexttospeech engine (not more static list)
+# - some code cleanup
 
 # 4.1 - 20160509
 # - added support for auto splitting sentences longer than the supported engine chars
