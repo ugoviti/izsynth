@@ -13,8 +13,8 @@
 # script variables
 NAME="izsynth"
 DESCRIPTION="TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems"
-VERSION="4.2"
-VERSION_DATE="20160524"
+VERSION="4.3"
+VERSION_DATE="2016XXXX"
 
 #####################################
 ## default suggested user variables to change 
@@ -38,11 +38,17 @@ PLAYBACK_BACKGROUND="yes"
 # resynth the file if it already exist
 PLAYBACK_RESYNTH="no"
 
+# command used to play the synthesized audio file
+PLAYBACK_COMMAND="mplayer"
+
+# default playback command options
+PLAYBACK_COMMAND_OPTS="-quiet -nolirc -noconsolecontrols"
+
+# default playback device
+PLAYBACK_DEVICE="alsa"
+
 # sound card playback volume
 #PLAYBACK_VOLUME="30"
-
-# command used to play the synthehtized audio file
-PLAYBACK_COMMAND="mplayer -ao alsa -really-quiet -nolirc -noconsolecontrols"
 
 ###########################################################################################
 ## system variables - edit with care
@@ -782,18 +788,22 @@ synthesize_file() {
 play_file () {
   local IN="$1"
 
-  [ ! -z "$PLAYBACK_VOLUME" ] && PLAYBACK_COMMAND_OPTS="-volume $PLAYBACK_VOLUME"
+  # change playback device (mplayer specific)
+  [ ! -z "$PLAYBACK_DEVICE" ] && local PLAYBACK_COMMAND_OPTS="$PLAYBACK_COMMAND_OPTS -ao $PLAYBACK_DEVICE"
+
+  # change playback volume (mplayer specific)
+  [ ! -z "$PLAYBACK_VOLUME" ] && local PLAYBACK_COMMAND_OPTS="$PLAYBACK_COMMAND_OPTS -volume $PLAYBACK_VOLUME"
 
   # if we must remove the synthesized file, of course we can't remove it if PLAYBACK_BACKGROUND=yes
   [ "$PLAYBACK_REMOVE" = "yes" ] && PLAYBACK_BACKGROUND="no"
 
-  echo "Playing      - input:[$IN]"
+  echo "Playing      - input:[$IN] command:[$PLAYBACK_COMMAND] options:[$PLAYBACK_COMMAND_OPTS]"
 
   if [ "$PLAYBACK_BACKGROUND" = "yes" ]
     then
-      $PLAYBACK_COMMAND $PLAYBACK_COMMAND_OPTS "$IN" &
+      $PLAYBACK_COMMAND $PLAYBACK_COMMAND_OPTS "$IN" 1>/dev/null &
     else
-      $PLAYBACK_COMMAND $PLAYBACK_COMMAND_OPTS "$IN"
+      $PLAYBACK_COMMAND $PLAYBACK_COMMAND_OPTS "$IN" 1>/dev/null
   fi
 
   # if required, remove the synthesized file
@@ -1390,6 +1400,10 @@ Background music management:
 
 Soundcard audio playback options:
   -x                         Playback the generated files using the soundcard speakers (current: $PLAYBACK) (otherwise assemble and save the recordings into output directory)
+  -d                         Playback output device (current: $PLAYBACK_DEVICE)
+  -D                         List available playback output devices
+  -k                         Playback command (current: $PLAYBACK_COMMAND)
+  -K                         Playback command extra options (current: $PLAYBACK_COMMAND_OPTS)
   -b                         Playback in background detaching the $NAME command (current: $PLAYBACK_BACKGROUND) (only if '-x' = yes)
   -W     <volume>            Change the playback soundcard output volume (current: $([ ! -z "$PLAYBACK_VOLUME" ] && echo -e -n "$PLAYBACK_VOLUME" || echo -e -n "none - use a number from 0 to 100"))
   -r                         Remove synthesized file after playback
@@ -1422,95 +1436,117 @@ fi
 # Usage: scriptname -options
 # Note: dash (-) necessary
 
-while getopts "t:i:o:m:S:p:P:F:M:T:e:v:W:slrLwxbhHEV" option ; do
+while getopts "t:i:o:m:S:p:P:F:M:T:e:d:k:K:v:W:slrLwxDbhHEV" option ; do
   case $option in
-    t ) # text string to synthesize
+    t) # text string to synthesize
         TTS_STRING="${OPTARG}"
         # parse stdin if the special char - is used
         [ "$TTS_STRING" = "-" ] && TTS_STRING="$(cat -)"
         ;;
-    i ) # input file or directory to synthesize or convert (create an array with the input files path)
+    i) # input file or directory to synthesize or convert (create an array with the input files path)
         IN_FILE+=("$OPTARG")
         # parse stdin if the special char - is used
         [ "$IN_FILE" = "-" ] && unset IN_FILE && TTS_STRING="$(cat -)"
         ;;
-    o ) # output destination directory to save synthesized text
+    o) # output destination directory to save synthesized text
         OUT_DIR="${OPTARG}"
         ;;
-    m ) # wav file to use as background music
+    m) # wav file to use as background music
         MUSIC_FILE="${OPTARG}"
         ;;
-    S ) # start background music after specified seconds
+    S) # start background music after specified seconds
         MUSIC_START="${OPTARG}"
         ;;
-    p ) # pad the begin of the TTS audio using the specified time <default 5 sec>
+    p) # pad the begin of the TTS audio using the specified time <default 5 sec>
         TTS_PAD_BEGIN="${OPTARG}"
         ;;
-    P ) # pad the end of the TTS audio using the specified time <default 5 sec>
+    P) # pad the end of the TTS audio using the specified time <default 5 sec>
         TTS_PAD_END="${OPTARG}"
         ;;
-    F ) # fade the begin and the end of the wav music using the specified time <default 10 sec>
+    F) # fade the begin and the end of the wav music using the specified time <default 10 sec>
         MUSIC_FADE="${OPTARG}"
         ;;
-    M ) # music volume attenuation
+    M) # music volume attenuation
         MUSIC_VOLUME="${OPTARG}"
 	;;
-    T ) # TTS volume attenuation
+    T) # TTS volume attenuation
         TTS_VOLUME="${OPTARG}"
 	;;
-    e ) # use specified voice synthesizer engine
+    e) # use specified voice synthesizer engine
         TTS_ENGINE="${OPTARG}"
 	;;
-    v ) # use specified voice pack
+    v) # use specified voice pack
         TTS_VOICE="${OPTARG}"
 	;;
-    s ) # split destination audio files into audio formats sub directories
+    s) # split destination audio files into audio formats sub directories
         [ "$SPLIT_OUT_FILE" != "yes" ] && SPLIT_OUT_FILE="yes" || SPLIT_OUT_FILE="no"
 	;;
-    l ) # list installed TTS voice pack
+    l) # list installed TTS voice pack
 	make_tmp
 	tts_engines_load
 	check_tts_engine
         tts_engine_$TTS_ENGINE voices
 	exit 0
 	;;
-    L ) # list installed TTS voice engines synthesizer
+    L) # list installed TTS voice engines synthesizer
         tts_engines_list
 	exit 0
 	;;
-    W ) # change the playback volume
+    W) # change the playback volume
         PLAYBACK_VOLUME="${OPTARG}"
 	;;
-    r ) # Remove synthesized file after playback
+    r) # Remove synthesized file after playback
 	PLAYBACK_REMOVE="yes"
 	;;
-    w ) # overWrite the synthesized file
+    w) # overWrite the synthesized file
         [ "$PLAYBACK_RESYNTH" != "no" ] && PLAYBACK_RESYNTH="no" || PLAYBACK_RESYNTH="yes"
 	;;
-    x ) # Assemble and save PBX recordings, otherwise playback the generated files using the soundcard speakers
+    x) # Assemble and save PBX recordings, otherwise playback the generated files using the soundcard speakers
         [ "$PLAYBACK" != "yes" ] && PLAYBACK="yes" || PLAYBACK="no"
 	;;
-    b ) # Playback in background detaching the command
+    d) # mplayer playback device
+        PLAYBACK_DEVICE="${OPTARG}"
+	;;
+    D) # list mplayer playback devices
+        aplay -l | grep ^card | while read devices ; do
+          card=$(echo $devices | awk '{print $2}' | tr -d ":")
+          device=$(echo $devices | awk '{print $7}' | tr -d ":")
+          description=$(echo $devices | sed 's/\[/(/g' | sed 's/\]/)/g' | awk -F "[()]" '{print "(description: "$4")"}')
+          echo "alsa:device=hw=$card.$device $description"
+        done
+
+	# list all user custom software devices
+	cat $HOME/.asoundrc 2>/dev/null | grep ^pcm | awk '{print "alsa:device="$1}' | sed 's/pcm.//'
+
+	exit 0
+	;;
+    k) # playback command
+        PLAYBACK_COMMAND="${OPTARG}"
+	;;
+    K) # playback command extra options
+        PLAYBACK_COMMAND_OPTS="${OPTARG}"
+	;;
+    b) # Playback in background detaching the command
         [ "$PLAYBACK_BACKGROUND" != "yes" ] && PLAYBACK_BACKGROUND="yes" || PLAYBACK_BACKGROUND="no"
 	;;
-    h ) # display this help menu
+    h) # display this help menu
         usage
 	exit 0
 	;;
-    H ) # display engine help menu
+    H) # display engine help menu
         tts_engine_$TTS_ENGINE help
 	exit 0
 	;;
-    E ) # display usage examples
+    E) # display usage examples
         usage_examples
 	exit 0
 	;;
-    V ) # display current version
+    V) # display current version
         echo "$VERSION"
         #echo $NAME version: $VERSION released: $VERSION_DATE
 	exit 0
 	;;
-    * )
+    *)
         usage
         echo "invalid switch specified - abort." >&2
         exit 1
@@ -1564,7 +1600,7 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 
 # TODO:
 # ============================================================================
-# - add support for automatically no keep long synthesized sentence (>= 255 chars)
+# - add support for automatically no keep long synthesized sentences (>= 255 chars)
 # - add support for http://www.vocalware.com (investigating licence issues)
 # - add support for http://www.readspeaker.com (investigating licence issues)
 # - add support for http://www.acapela-group.com (investigating licence issues)
@@ -1573,6 +1609,10 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 
 # ChangeLog:
 # ============================================================================
+# 4.3 - 2016XXXX
+# - implemented PLAYBACK_DEVICE and new -d (specify the output device) -D (list available output devices) options
+# - is now possibile to override the playback command (-k) and playback command options (-K)
+
 # 4.2 - 20160524
 # - don't create tts files name longer than 64 chars
 # - dynamic voices listing for fromtexttospeech engine (not more static list)

@@ -96,11 +96,17 @@ PLAYBACK_BACKGROUND="yes"
 # resynth the file if it already exist
 PLAYBACK_RESYNTH="no"
 
+# command used to play the synthesized audio file
+#PLAYBACK_COMMAND="mplayer"
+ 
+# default playback command options
+#PLAYBACK_COMMAND_OPTS="-quiet -nolirc -noconsolecontrols"
+ 
+# default playback device
+#PLAYBACK_DEVICE="alsa"
+ 
 # sound card playback volume
 #PLAYBACK_VOLUME="30"
-
-# command used to play the synthehtized audio file
-PLAYBACK_COMMAND="mplayer -ao alsa -really-quiet -nolirc -noconsolecontrols"
 
 # default base temp directory (comment if you want use the system default directory base, ex. /tmp)
 TMP_DIR_BASE="/dev/shm"
