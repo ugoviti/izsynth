@@ -1510,9 +1510,10 @@ while getopts "t:i:o:m:S:p:P:F:M:T:e:d:k:K:v:W:slrLwxDbhHEV" option ; do
     D) # list mplayer playback devices
         aplay -l | grep ^card | while read devices ; do
           card=$(echo $devices | awk '{print $2}' | tr -d ":")
-          device=$(echo $devices | awk '{print $7}' | tr -d ":")
-          description=$(echo $devices | sed 's/\[/(/g' | sed 's/\]/)/g' | awk -F "[()]" '{print "(description: "$4")"}')
-          echo "alsa:device=hw=$card.$device $description"
+          #device=$(echo $devices | awk '{print $7}' | tr -d ":")
+          description=$(echo $devices | sed 's/\[/(/g' | sed 's/\]/)/g' | awk -F "[()]" '{print $4}')
+          #echo "alsa:device=hw=$card.$device $description"
+          echo "alsa:device=hw=$card     $description"
         done
 
 	# list all user custom software devices
