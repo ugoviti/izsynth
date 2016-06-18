@@ -84,7 +84,7 @@ MUSIC_FADE="5"
 #MUSIC_VOLUME="0.1"
 
 # split destination audio files into audio formats sub directories
-SPLIT_OUT_FILE="no"
+SPLIT_OUT_FILE="yes"
 
 # read external izsynth config file (used for service API and external variables override)
 IZSYNTH_CONFIG_DIR="$HOME/.config/$NAME"
@@ -1235,8 +1235,12 @@ assemble_file() {
       # if not megamixing, remix and save all single files
       if [ "$MEGAMIX" != "yes" ]
        then
-        [ "$REMIX" = "yes" ] && remix_file "$OUT_TMP" "$OUT_TMP_REMIXED"
-        [ "$REMIX" = "yes" ] && save_file  "$OUT_TMP_REMIXED" "$OUT" || save_file "$OUT_TMP" "$OUT"
+        if [ "$REMIX" = "yes" ]; then
+            remix_file "$OUT_TMP" "$OUT_TMP_REMIXED"
+            save_file  "$OUT_TMP_REMIXED" "$OUT"
+          else
+           [ "$OUT_TMP" != "$OUT" ] && save_file "$OUT_TMP" "$OUT"
+       fi
        else
         # save into this global array all files to megamix (synthesized files and input wav/mp3 files)
         IN_FILE_MEGAMIX[$ID]="$OUT_TMP"
@@ -1385,32 +1389,32 @@ Input/Output file management:
 
 Text To Speech management:
   -e     <engine>            TTS voice engine (current: $TTS_ENGINE)
-  -v     <voice>             TTS Voice language (current: $TTS_VOICE)
-  -T     <volume>            TTS volume (current: $([ ! -z "$TTS_VOLUME" ] && echo -e -n "$TTS_VOLUME" || echo -e -n "none - use a number from 0.01 to 1"))
+  -v     <voice>             TTS voice language (current: $TTS_VOICE)
+  -T     <volume>            TTS volume (current: $([ ! -z "$TTS_VOLUME" ] && echo -e -n "$TTS_VOLUME" || echo -e -n "none) (use a number from 0.01 to 1"))
   -L                         List usable TTS engines
   -l                         List usable TTS voices
 
 Background music management:
   -m     <file>              Input mp3/wav audio file to use as background music
-  -S     <seconds>           Start background music after specified time (current: $MUSIC_START)
+  -S     <seconds>           Start background music after specified time (current: $MUSIC_START sec)
   -p     <seconds>           Pad the begin of the TTS audio using the specified time (current: $TTS_PAD_BEGIN sec)
   -P     <seconds>           Pad the end of the TTS audio using the specified time (current: $TTS_PAD_END sec)
   -F     <seconds>           Fade the begin and the end of the wav music using the specified time (current: $MUSIC_FADE sec)
-  -M     <volume>            Background music volume (current: $([ ! -z "$MUSIC_VOLUME" ] && echo -e -n "$MUSIC_VOLUME" || echo -e -n "none - use a number from 0.01 to 1"))
+  -M     <volume>            Background music volume (current: $([ ! -z "$MUSIC_VOLUME" ] && echo -e -n "$MUSIC_VOLUME" || echo -e -n "none) (use a number from 0.01 to 1"))
 
 Soundcard audio playback options:
-  -x                         Playback the generated files using the soundcard speakers (current: $PLAYBACK) (otherwise assemble and save the recordings into output directory)
+  -x                         Playback the generated files using the soundcard speakers (current: $PLAYBACK) (no = assemble and export files format for PBX usage)
   -d                         Playback output device (current: $PLAYBACK_DEVICE)
   -D                         List available playback output devices
   -k                         Playback command (current: $PLAYBACK_COMMAND)
   -K                         Playback command extra options (current: $PLAYBACK_COMMAND_OPTS)
   -b                         Playback in background detaching the $NAME command (current: $PLAYBACK_BACKGROUND) (only if '-x' = yes)
-  -W     <volume>            Change the playback soundcard output volume (current: $([ ! -z "$PLAYBACK_VOLUME" ] && echo -e -n "$PLAYBACK_VOLUME" || echo -e -n "none - use a number from 0 to 100"))
+  -W     <volume>            Change the playback soundcard output volume (current: $([ ! -z "$PLAYBACK_VOLUME" ] && echo -e -n "$PLAYBACK_VOLUME" || echo -e -n "none) (use a number from 0 to 100"))
   -r                         Remove synthesized file after playback
 
 Output file options:
-  -w                         Overwrite the synthesized file, otherwise keep it (current: $PLAYBACK_RESYNTH)
-  -s                         Split destination audio files into audio formats sub directories (current: $SPLIT_OUT_FILE)
+  -w                         Overwrite the synthesized file (current: $PLAYBACK_RESYNTH) (no = keep the generated file for later usage)
+  -s                         Split destination audio files into audio formats sub directories (current: $SPLIT_OUT_FILE) (only if '-x' = no)
 
 Misc options:
   -h                         Display this help menu
@@ -1612,6 +1616,7 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 # 4.3 - 2016XXXX
 # - implemented PLAYBACK_DEVICE and new -d (specify the output device) -D (list available output devices) options
 # - is now possibile to override the playback command (-k) and playback command options (-K)
+# - help menu enhancements
 
 # 4.2 - 20160524
 # - don't create tts files name longer than 64 chars
