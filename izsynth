@@ -14,7 +14,7 @@
 NAME="izsynth"
 DESCRIPTION="TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems"
 VERSION="4.3"
-VERSION_DATE="2016XXXX"
+VERSION_DATE="20160618"
 
 #####################################
 ## default suggested user variables to change 
@@ -1613,7 +1613,7 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 
 # ChangeLog:
 # ============================================================================
-# 4.3 - 2016XXXX
+# 4.3 - 20160618
 # - implemented PLAYBACK_DEVICE and new -d (specify the output device) -D (list available output devices) options
 # - is now possibile to override the playback command (-k) and playback command options (-K)
 # - help menu enhancements
