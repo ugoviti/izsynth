@@ -25,13 +25,13 @@ Follow and contribute the development on GitHub: https://github.com/ugoviti/izsy
 
 Before installing izsynth, install the dependencies for your distribution:
 
-#### For CentOS:
+#### RedHat based distros like CentOS/Fedora
 `yum install -y epel-release`
 `yum install -y sox lame mplayer curl espeak wine`
 
-#### For Debian based distros (like Raspian on RaspberryPi)
+#### Debian based distros like Ubuntu or Raspian on RaspberryPi
 `sudo apt-get update`
-`sudo apt-get install -y sox lame mplayer curl espeak wget bsdmainutils file`
+`sudo apt-get install -y sox lame mplayer curl espeak wget bsdmainutils file mawk coreutils`
 
 For windows sapi5 support, install the `wine` package and download sapi2wav.exe:
 
@@ -45,8 +45,12 @@ Download latest stable version of izSynth package from http://www.initzero.it/pr
 
 **Development Release**
 
-`cd /usr/local`
+`cd /usr/local/bin`
 `wget https://raw.githubusercontent.com/ugoviti/izsynth/master/izsynth -O izsynth && chmod 755 izsynth`
+
+### Update izSynth
+
+You can **update** izSynth using the same command you used to  install it.
 
 ## USAGE
 ### Command line
@@ -63,75 +67,19 @@ Make a quick test with the following command:
 
 **izSynth is configurable in 3 ways:**
 
-* From command line specifying the options
-* Modifying the variables on the izsynth script itself
-* Using an external config file for overriding the izsynth variables.
+* From command line specifying the options ('izsynth -h' to list available options or 'izsynth -E' for example usage)
+* Using an external config file for overriding the izsynth variables (suggested method)
+* Modifying the variables on the izsynth script itself (not suggested)
 
+I suggest to create an external config file to avoid changes to your configurations when you update izsynth script.
 
-I suggest to create an external config file to avoid changes to your configurations when you update izsynth.
+Create the following config file: `$HOME/.config/izsynth/izsynth.conf` using the command:
 
-create the following config file: `$HOME/.config/izsynth/izsynth.conf`
+`$ izsynth -C`
 
-**NB.** if the `$HOME/.config/izsynth` doesn't exist, izsynth will make it on the first run
+and edit it using your prefered text editor.
 
-```
-# ENGINE SPECIFIC API KEYS
-VOICERSS_APIKEY=your_apy_key_hash_go_here
-
-# default tts engine
-TTS_ENGINE="naturalreaders"
-
-# default tts voice (null = let tts engine to set default voice. it will use english)
-TTS_VOICE="Peter"
-
-# realtime audio playback variables
-PLAYBACK="yes"
-
-# remove synthesized file after playback
-PLAYBACK_REMOVE="no"
-
-# play the file in background, otherwise foreground
-PLAYBACK_BACKGROUND="yes"
-
-# resynth the file if it already exist
-PLAYBACK_RESYNTH="no"
-
-# command used to play the synthesized audio file
-#PLAYBACK_COMMAND="mplayer"
- 
-# default playback command options
-#PLAYBACK_COMMAND_OPTS="-quiet -nolirc -noconsolecontrols"
- 
-# default playback device
-#PLAYBACK_DEVICE="alsa"
- 
-# sound card playback volume
-#PLAYBACK_VOLUME="30"
-
-# default base temp directory (comment if you want use the system default directory base, ex. /tmp)
-TMP_DIR_BASE="/dev/shm"
-
-# default redirect to tmp dir
-OUT_DIR="$TMP_DIR_BASE"
-
-# default tts volume
-#TTS_VOLUME="0.4"
-
-# default wait n. seconds before speaking tts
-TTS_PAD_BEGIN="5"
-
-# default wait n. seconds after speaked tts
-TTS_PAD_END="5"
-
-# default start music after n. seconds
-MUSIC_START="0"
-
-# default fade the start and end of music with 5 seconds
-MUSIC_FADE="5"
-
-# default music volume
-#MUSIC_VOLUME="0.1"
-```
+**NB.** if the `$HOME/.config/izsynth` directory doesn't exist, izsynth will create it on the first run
 
 **REMEMBER: the command line options win always against the config file**
 
@@ -157,4 +105,28 @@ If you found the correct audio volume, I suggest to modify the config file, so y
 `PLAYBACK_VOLUME="90"`
 
 ----
+
+----
+
+**Use an external device (like bluetooth speaker) as playback output:**
+
+First configure the bluetooth stack and connect you izsynth box to the bluetooth speaker.
+
+Now test the output from command line:
+
+`izsynth -t "I love domoticz" -d alsa:device=bluetooth`
+
+or to another audio card:
+
+`izsynth -t "I love domoticz" -d alsa:device=hw=2.0`
+
+you can list all local usable alsa devices with:
+
+`izsynth -D`
+
+----
+
+**Create voice announcements with background music**
+
+`izsynth -e google -v en -m /path/music.mp3 -p 3 -P 2 -F 2 -t "Welcome home, mr Stark"`
 

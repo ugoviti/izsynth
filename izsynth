@@ -13,8 +13,8 @@
 # script variables
 NAME="izsynth"
 DESCRIPTION="TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems"
-VERSION="4.3"
-VERSION_DATE="20160618"
+VERSION="4.4"
+VERSION_DATE="20161028"
 
 #####################################
 ## default suggested user variables to change 
@@ -86,10 +86,14 @@ MUSIC_FADE="5"
 # split destination audio files into audio formats sub directories
 SPLIT_OUT_FILE="yes"
 
+# detect HOME variable if the current shell doesn't set it
+[ -z "$HOME" ] && HOME="$(cd ; pwd)"
+
 # read external izsynth config file (used for service API and external variables override)
 IZSYNTH_CONFIG_DIR="$HOME/.config/$NAME"
 IZSYNTH_CONFIG_FILE="$IZSYNTH_CONFIG_DIR/$NAME.conf"
-# make default izsynth config directory
+
+# make default izsynth config directory if not exist
 [ ! -e "$IZSYNTH_CONFIG_DIR/engines" ] && mkdir -p "$IZSYNTH_CONFIG_DIR/engines"
 [ -e "$IZSYNTH_CONFIG_FILE" ] && . "$IZSYNTH_CONFIG_FILE"
 
@@ -566,7 +570,7 @@ tts_engine_festival() {
                 echo "festival voices list not supported"
                 echo "run 'festival' command and type: (voice.list)"
                 echo "CTRL-D to exit"
-                echo "configure the desired language into ~/.festivalrc"
+                echo "configure the desired language into $HOME/.festivalrc"
                 ;;
         voice)
                 #eval ${FUNCNAME} voices 2>&1 | grep -w "^$VOICE$"
@@ -679,9 +683,70 @@ tts_engine_sapi5() {
 # END TTS ENGINES
 ###########################################################################################
 
+# create the default config file
+write_default_config() {
+echo "# ENGINE SPECIFIC API KEYS
+VOICERSS_APIKEY=\"your_apy_key_hash_go_here\"
+ 
+# default tts engine
+TTS_ENGINE=\"$TTS_ENGINE\"
+ 
+# default tts voice (null = let tts engine to set default voice. it will use english)
+TTS_VOICE=\"$TTS_VOICE\"
+ 
+# realtime audio playback variables
+PLAYBACK=\"$PLAYBACK\"
+ 
+# remove synthesized file after playback
+PLAYBACK_REMOVE=\"$PLAYBACK_REMOVE\"
+ 
+# play the file in background, otherwise foreground
+PLAYBACK_BACKGROUND=\"$PLAYBACK_BACKGROUND\"
+ 
+# resynth the file if it already exist
+PLAYBACK_RESYNTH=\"$PLAYBACK_RESYNTH\"
+ 
+# command used to play the synthesized audio file
+PLAYBACK_COMMAND=\"$PLAYBACK_COMMAND\"
+ 
+# default playback command options
+PLAYBACK_COMMAND_OPTS=\"$PLAYBACK_COMMAND_OPTS\"
+ 
+# default playback device
+PLAYBACK_DEVICE=\"$PLAYBACK_DEVICE\"
+ 
+# sound card playback volume
+#PLAYBACK_VOLUME=\"$PLAYBACK_VOLUME\"
+ 
+# default base temp directory (comment if you want use the system default directory base, ex. /tmp)
+TMP_DIR_BASE=\"$TMP_DIR_BASE\"
+ 
+# default redirect to tmp dir
+OUT_DIR=\"$TMP_DIR_BASE\"
+ 
+# default tts volume
+#TTS_VOLUME=\"$TTS_VOLUME\"
+ 
+# default wait n. seconds before speaking tts
+TTS_PAD_BEGIN=\"$TTS_PAD_BEGIN\"
+ 
+# default wait n. seconds after speaked tts
+TTS_PAD_END=\"$TTS_PAD_END\"
+ 
+# default start music after n. seconds
+MUSIC_START=\"$MUSIC_START\"
+ 
+# default fade the start and end of music with 5 seconds
+MUSIC_FADE=\"$MUSIC_FADE=\"
+ 
+# default music volume
+#MUSIC_VOLUME=\"$MUSIC_VOLUME\"
+" > "$IZSYNTH_CONFIG_FILE"
+}
+
 # load all external engines
 tts_engines_load() {
-  for engine in $(find "$IZSYNTH_CONFIG_DIR/engines/" -name "*.conf") ; do . $engine ; done
+  for engine in $(find "$IZSYNTH_CONFIG_DIR/engines/" -type f -name "*.conf") ; do . $engine ; done
 }
 
 # list all supported engines
@@ -733,6 +798,19 @@ Step 3: $TTS_ENGINE specific config and variables:
   tts_engine_${TTS_ENGINE[$ID]} help
 }
 
+confirm () {
+    # call with a prompt string or use a default
+    read -r -p "${1:-Are you sure? [y/N]} " response
+    case $response in
+        [yY][eE][sS]|[yY]) 
+            true
+            ;;
+        *)
+            false
+            ;;
+    esac
+}
+
 # print orizontal line with the given length
 rulem()  {
   if [ $# -eq 0 ]; then
@@ -781,7 +859,10 @@ synthesize_file() {
 
   echo -e -n "size:[$(show_size "$OUT")] type:[$(show_mime "$OUT")] result:"
 
-  if [[ $RETVAL = 0 && "$(show_mime_brief "$OUT")" == "audio" ]]; then echo -e -n "[SUCCESS]\n" ; else echo -e -n "[ERROR]\n" ; exit 1; fi
+  #if [[ $RETVAL = 0 && "$(show_mime_brief "$OUT")" == "audio" ]]; then echo -e -n "[SUCCESS]\n" ; else echo -e -n "[ERROR]\n" ; exit 1; fi
+
+  # workaround for some providers that doesn't set to mime type correctly
+  if [[ $RETVAL = 0 ]] && [[ "$(show_mime_brief "$OUT")" == "audio" || "$(show_mime_brief "$OUT")" == "application" ]]; then echo -e -n "[SUCCESS]\n" ; else echo -e -n "[ERROR]\n" ; exit 1; fi
 }
 
 # playback the synthesized file
@@ -801,13 +882,15 @@ play_file () {
 
   if [ "$PLAYBACK_BACKGROUND" = "yes" ]
     then
+      # do not block the command execution
       $PLAYBACK_COMMAND $PLAYBACK_COMMAND_OPTS "$IN" 1>/dev/null &
     else
+      # wait playback to finish before exit from izsynth
       $PLAYBACK_COMMAND $PLAYBACK_COMMAND_OPTS "$IN" 1>/dev/null
   fi
 
   # if required, remove the synthesized file
-  [ "$PLAYBACK_REMOVE" = "yes" ] && echo "Removing     - input:[$IN]" && rm -f "$OUT"
+  [ "$PLAYBACK_REMOVE" = "yes" ] && echo "Removing     - input:[$IN]" && rm -f "$IN"
 }
 
 # save the file in the output directory
@@ -1417,6 +1500,7 @@ Output file options:
   -s                         Split destination audio files into audio formats sub directories (current: $SPLIT_OUT_FILE) (only if '-x' = no)
 
 Misc options:
+  -C                         Write/Overwrite the user config into $IZSYNTH_CONFIG file using the default variables
   -h                         Display this help menu
   -H                         Display the '$TTS_ENGINE' TTS Engine help menu
   -E                         Display $NAME usage examples
@@ -1440,7 +1524,7 @@ fi
 # Usage: scriptname -options
 # Note: dash (-) necessary
 
-while getopts "t:i:o:m:S:p:P:F:M:T:e:d:k:K:v:W:slrLwxDbhHEV" option ; do
+while getopts "t:i:o:m:S:p:P:F:M:T:e:d:k:K:v:W:slrLwxDbChHEV" option ; do
   case $option in
     t) # text string to synthesize
         TTS_STRING="${OPTARG}"
@@ -1533,6 +1617,17 @@ while getopts "t:i:o:m:S:p:P:F:M:T:e:d:k:K:v:W:slrLwxDbhHEV" option ; do
     b) # Playback in background detaching the command
         [ "$PLAYBACK_BACKGROUND" != "yes" ] && PLAYBACK_BACKGROUND="yes" || PLAYBACK_BACKGROUND="no"
 	;;
+    C) # write/overwrite user config file
+        if [ -e "$IZSYNTH_CONFIG_FILE" ]; then
+          echo "WARNING: the user config file '$IZSYNTH_CONFIG_FILE' already exist"
+	  confirm "Do you want overwrite it? [y/N]" && write_default_config
+          [ $? = 0 ] && echo "'$IZSYNTH_CONFIG_FILE' config file written successfully" || echo "ERROR writing '$IZSYNTH_CONFIG_FILE' config file"
+         else
+          write_default_config
+          [ $? = 0 ] && echo "'$IZSYNTH_CONFIG_FILE' config file written successfully" || echo "ERROR writing '$IZSYNTH_CONFIG_FILE' config file"
+        fi
+	exit 0
+	;;
     h) # display this help menu
         usage
 	exit 0
@@ -1613,6 +1708,10 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 
 # ChangeLog:
 # ============================================================================
+# 4.4 - 20161028
+# - implemented -C option to write/overwrite the izsynth user config file
+# - some sanity checks to detect the $HOME directory of user
+
 # 4.3 - 20160618
 # - implemented PLAYBACK_DEVICE and new -d (specify the output device) -D (list available output devices) options
 # - is now possibile to override the playback command (-k) and playback command options (-K)
@@ -1662,7 +1761,7 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 
 # 2.1 - 20151024
 # - implemented PLAYBACK_BACKGROUND variable to detach the process when playing the voice
-#   (useful when used as TTS engine inside an home automation system)
+#   (useful when used as TTS engine inside an home automation systemi for not blocking commands execution)
 
 # 2.0 - 20150908
 # - direct playback to audio soundcard support
@@ -1671,11 +1770,11 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 # - fixes for sox >= 14.4.x
 
 # 1.5 - 20150805
-# - changed sapi5 voice assignement (now you must use the name and not the reference number)
+# - changed sapi5 voice assignment (now you must use the name and not the voice id number)
 
 # 1.4 - 20130221
 # - mp3 convertion fixes
 
 # 1.3 - 20120627
-# - first version
+# - first public version
 # ============================================================================
