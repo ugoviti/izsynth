@@ -13,8 +13,8 @@
 # script variables
 NAME="izsynth"
 DESCRIPTION="TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems"
-VERSION="4.4"
-VERSION_DATE="20161028"
+VERSION="4.5"
+VERSION_DATE="20161223"
 
 #####################################
 ## default suggested user variables to change 
@@ -38,16 +38,16 @@ PLAYBACK_BACKGROUND="yes"
 # resynth the file if it already exist
 PLAYBACK_RESYNTH="no"
 
-# command used to play the synthesized audio file
+# command used to play the synthesized audio file (mplayer example)
 PLAYBACK_COMMAND="mplayer"
 
-# default playback command options
-PLAYBACK_COMMAND_OPTS="-quiet -nolirc -noconsolecontrols"
+# default playback command options (mplayer example)
+#PLAYBACK_COMMAND_OPTS="-quiet -nolirc -noconsolecontrols"
 
-# default playback device
-PLAYBACK_DEVICE="alsa"
+# default playback device (mplayer example)
+#PLAYBACK_DEVICE="alsa"
 
-# sound card playback volume
+# sound card hardware playback volume (use an integer from 0 to 100)
 #PLAYBACK_VOLUME="30"
 
 ###########################################################################################
@@ -97,10 +97,12 @@ IZSYNTH_CONFIG_FILE="$IZSYNTH_CONFIG_DIR/$NAME.conf"
 [ ! -e "$IZSYNTH_CONFIG_DIR/engines" ] && mkdir -p "$IZSYNTH_CONFIG_DIR/engines"
 [ -e "$IZSYNTH_CONFIG_FILE" ] && . "$IZSYNTH_CONFIG_FILE"
 
+
 ###########################################################################################
 # main script - don't edit anything bellow
 ###########################################################################################
 
+###########################################################################################
 # START TTS ENGINES
 # add others TTS engines here
 
@@ -379,7 +381,7 @@ tts_engine_voicerss() {
                 echo "Get the VoiceRSS API KEY from: http://www.voicerss.org/personel"
                 echo "and put the following variable info '$IZSYNTH_CONFIG_FILE' config file:"
                 echo
-                echo "VOICERSS_APIKEY=yourapikey"
+                echo "VOICERSS_APIKEY=\"your_api_key_hash_go_here\""
                 ;;
         env)
                 # default output file format
@@ -401,7 +403,7 @@ tts_engine_voicerss() {
         synthesize)
                 local TTS_STRING_CONTENT="$(urlencode "$(cat "$IN" | parse_tts_string)")"
                 local TTS_VOICE="$(eval ${FUNCNAME} voice $VOICE)"
-                [ -z "$VOICERSS_APIKEY" ] && print_help_config && exit 1
+                [ -z "$VOICERSS_APIKEY" ] && echo && print_help_config && exit 1
 
                 curl -s "http://api.voicerss.org/?key=$VOICERSS_APIKEY&src=$TTS_STRING_CONTENT&f=44khz_16bit_mono&hl=$TTS_VOICE" -o "$OUT"
                 ;;
@@ -683,10 +685,54 @@ tts_engine_sapi5() {
 # END TTS ENGINES
 ###########################################################################################
 
-# create the default config file
+###########################################################################################
+# START PLAYBACK ENGINES
+# add others PLAYBACK engines here
+
+playback_engine_mplayer() {
+  local ACTION="$1"
+  shift
+  local IN="$1"
+
+  case $ACTION in
+        description)
+		echo "2016-12-18 MPlayer http://www.mplayerhq.hu/"
+                ;;
+        help)
+                echo "MPlayer - The Movie Player"
+                echo "MPlayer is a movie player which runs on many systems (see the documentation). It plays most MPEG/VOB, AVI, Ogg/OGM, VIVO, ASF/WMA/WMV, QT/MOV/MP4, RealMedia, Matroska, NUT, NuppelVideo, FLI, YUV4MPEG, FILM, RoQ, PVA files, supported by many native, XAnim, and Win32 DLL codecs. You can watch VideoCD, SVCD, DVD, 3ivx, DivX 3/4/5, WMV and even H.264 movies."
+                ;;
+        env)
+                # set default options
+                [ -z "$PLAYBACK_COMMAND_OPTS" ] && PLAYBACK_COMMAND_OPTS+=" -quiet -nolirc -noconsolecontrols -afm mp3lib,ffmpeg"
+
+                # change playback device. default: do not change playback device (suggested: alsa)
+                [ -z "$PLAYBACK_DEVICE" ] || PLAYBACK_COMMAND_OPTS+=" -ao $PLAYBACK_DEVICE"
+
+                # change playback volume. default: do not change output volume
+                [ -z "$PLAYBACK_VOLUME" ] || PLAYBACK_COMMAND_OPTS+=" -volume $PLAYBACK_VOLUME"
+                ;;
+        commands)
+                echo "mplayer"
+                ;;
+        play)
+                mplayer $PLAYBACK_COMMAND_OPTS "$IN"
+                ;;
+        *)
+                echo "${FUNCNAME}: wrong method called - abort"
+                exit 1
+                ;;
+  esac
+}
+
+
+# END PLAYBACK ENGINES
+###########################################################################################
+
+
 write_default_config() {
 echo "# ENGINE SPECIFIC API KEYS
-VOICERSS_APIKEY=\"your_apy_key_hash_go_here\"
+#VOICERSS_APIKEY=\"your_api_key_hash_go_here\"
  
 # default tts engine
 TTS_ENGINE=\"$TTS_ENGINE\"
@@ -716,7 +762,7 @@ PLAYBACK_COMMAND_OPTS=\"$PLAYBACK_COMMAND_OPTS\"
 PLAYBACK_DEVICE=\"$PLAYBACK_DEVICE\"
  
 # sound card playback volume
-#PLAYBACK_VOLUME=\"$PLAYBACK_VOLUME\"
+PLAYBACK_VOLUME=\"$PLAYBACK_VOLUME\"
  
 # default base temp directory (comment if you want use the system default directory base, ex. /tmp)
 TMP_DIR_BASE=\"$TMP_DIR_BASE\"
@@ -725,7 +771,7 @@ TMP_DIR_BASE=\"$TMP_DIR_BASE\"
 OUT_DIR=\"$TMP_DIR_BASE\"
  
 # default tts volume
-#TTS_VOLUME=\"$TTS_VOLUME\"
+TTS_VOLUME=\"$TTS_VOLUME\"
  
 # default wait n. seconds before speaking tts
 TTS_PAD_BEGIN=\"$TTS_PAD_BEGIN\"
@@ -737,19 +783,19 @@ TTS_PAD_END=\"$TTS_PAD_END\"
 MUSIC_START=\"$MUSIC_START\"
  
 # default fade the start and end of music with 5 seconds
-MUSIC_FADE=\"$MUSIC_FADE=\"
+MUSIC_FADE=\"$MUSIC_FADE\"
  
 # default music volume
-#MUSIC_VOLUME=\"$MUSIC_VOLUME\"
+MUSIC_VOLUME=\"$MUSIC_VOLUME\"
 " > "$IZSYNTH_CONFIG_FILE"
 }
 
-# load all external engines
+# load all external TTS engines
 tts_engines_load() {
   for engine in $(find "$IZSYNTH_CONFIG_DIR/engines/" -type f -name "*.conf") ; do . $engine ; done
 }
 
-# list all supported engines
+# list all supported TTS engines
 tts_engines_list(){
   print_tts_engines_table() {
   echo "Engine            Version     Type    Provider          APIKEY  Technology  HomePage"
@@ -762,6 +808,60 @@ tts_engines_list(){
   }
   print_tts_engines_table | column -c1 -t
 }
+
+# verify if the specified TTS engine exist
+tts_engines_check() {
+  if [ -z "$1" ] || [ -z "$(tts_engines_list | grep -w "$1")" ] 
+    then
+ 	echo "ERROR: wrong TTS engine synthesizer specified: '$1'"
+	echo
+	echo "please select an engine from the following list:"
+	echo
+	tts_engines_list
+	exit 1
+  fi
+}
+
+tts_engines_check_voice() {
+  if [ -z "$2" ] || [ -z "$(tts_engine_$1 voice $2)" ] 
+    then
+	echo "ERROR: the TTS voice '$2' doesn't exist, or is not supported by the engine '$1'"
+	echo
+	echo "please select a voice from the following list:"
+	echo
+	tts_engine_$1 voices
+	exit 1
+  fi
+}
+
+
+# list all supported playback engines
+playback_engines_list(){
+  print_playback_engines_table() {
+  echo "Engine            Version     Name              HomePage"
+  echo "----------------  ----------  ----------------  --------"
+  typeset -f | awk '/ \(\) $/ && !/^main / {print $1}' | grep "^playback_engine_" | sed 's/^playback_engine_//g' | while read engine
+   do
+     echo -n -e "$engine $(playback_engine_$engine description)\n"
+   done
+  }
+  print_playback_engines_table | column -c1 -t
+}
+
+
+# verify if the specified playback engine exist
+playback_engines_check() {
+  if [ -z "$1" ] || [ -z "$(playback_engines_list | grep -w "$1")" ]
+    then
+ 	echo "ERROR: wrong PLAYBACK engine specified: '$1'"
+	echo
+	echo "please select an engine from the following list:"
+	echo
+	playback_engines_list
+	exit 1
+  fi
+}
+
 
 
 # urlencode <string>
@@ -791,11 +891,11 @@ count_chars() {
 print_help_config() {
   echo "ERROR: Wrong or missing $NAME user config file.
 
-Step 1: Create this file: $IZSYNTH_CONFIG_FILE
+Step 1: Create this file: $IZSYNTH_CONFIG_FILE (use the command $0 -C)
 Step 2: Put into all variables you want override from the main script
-Step 3: $TTS_ENGINE specific config and variables:
+Step 3: $TTS_ENGINE engine specific config and variables:
 "
-  tts_engine_${TTS_ENGINE[$ID]} help
+  tts_engine_$TTS_ENGINE help
 }
 
 confirm () {
@@ -852,7 +952,7 @@ synthesize_file() {
   local OUT="$1"
 
   # tts_engine_* destination_file 
-  echo -e -n "Synthetizing - input:[$IN] engine:[${TTS_ENGINE[$ID]}] voice:["${TTS_VOICE[$ID]}"] output:[$OUT] "
+  echo -e -n "Synthesizing - input:[$IN] engine:[${TTS_ENGINE[$ID]}] voice:["${TTS_VOICE[$ID]}"] output:[$OUT] "
 
   tts_engine_${TTS_ENGINE[$ID]} synthesize "${TTS_VOICE[$ID]}" "$IN" "$OUT"
   local RETVAL=$?
@@ -866,14 +966,14 @@ synthesize_file() {
 }
 
 # playback the synthesized file
-play_file () {
+playback_file () {
   local IN="$1"
 
-  # change playback device (mplayer specific)
-  [ ! -z "$PLAYBACK_DEVICE" ] && local PLAYBACK_COMMAND_OPTS="$PLAYBACK_COMMAND_OPTS -ao $PLAYBACK_DEVICE"
+  # verify if the given PLAYBACK_COMMAND engine exist
+  playback_engines_check $PLAYBACK_COMMAND
 
-  # change playback volume (mplayer specific)
-  [ ! -z "$PLAYBACK_VOLUME" ] && local PLAYBACK_COMMAND_OPTS="$PLAYBACK_COMMAND_OPTS -volume $PLAYBACK_VOLUME"
+  # load the playback_engine env
+  playback_engine_$PLAYBACK_COMMAND env
 
   # if we must remove the synthesized file, of course we can't remove it if PLAYBACK_BACKGROUND=yes
   [ "$PLAYBACK_REMOVE" = "yes" ] && PLAYBACK_BACKGROUND="no"
@@ -883,10 +983,12 @@ play_file () {
   if [ "$PLAYBACK_BACKGROUND" = "yes" ]
     then
       # do not block the command execution
-      $PLAYBACK_COMMAND $PLAYBACK_COMMAND_OPTS "$IN" 1>/dev/null &
+      #$PLAYBACK_COMMAND $PLAYBACK_COMMAND_OPTS "$IN" 1>/dev/null &
+      playback_engine_$PLAYBACK_COMMAND play "$IN" 1>/dev/null &
     else
       # wait playback to finish before exit from izsynth
-      $PLAYBACK_COMMAND $PLAYBACK_COMMAND_OPTS "$IN" 1>/dev/null
+      #$PLAYBACK_COMMAND $PLAYBACK_COMMAND_OPTS "$IN" 1>/dev/null
+      playback_engine_$PLAYBACK_COMMAND play "$IN" 1>/dev/null
   fi
 
   # if required, remove the synthesized file
@@ -1030,6 +1132,146 @@ megamix_file() {
   echo "Megamixing   - input:[${IN_FILE_MEGAMIX[@]}] output:[$OUT] size:[$(show_size $OUT)]"
 }
 
+assemble_file() {
+  local IN="$1"
+  shift
+  local OUT="$1"
+
+  # local variables
+  local OUT_TMP="$TMP_DIR/$(print_name $IN).wav"
+  local OUT_TMP_REMIXED="$TMP_DIR/$(print_name $IN).remixed.wav"
+  local OUT_TMP_MEGAMIXED="$TMP_DIR/$(print_name $IN).megamixed.wav"
+
+  # if the input file is a text file, synthesize it
+  case "$(print_ext $IN)" in
+    txt)
+      # load any external TTS engines
+      tts_engines_load
+
+      # verify if the TTS_ENGINE exist
+      tts_engines_check ${TTS_ENGINE[$ID]}
+
+      # verify if the selected TTS voice is supported by the TTS engine
+      tts_engines_check_voice ${TTS_ENGINE[$ID]} ${TTS_VOICE[$ID]}
+
+      # import global tts_engine variables
+      tts_engine_${TTS_ENGINE[$ID]} env
+
+      local TTS_FILE="$TMP_DIR/$(print_name $IN).$TTS_EXT"
+      if [[ "$REMIX" = "yes" || "$PLAYBACK" = "no" ]]; then
+        synthesize_file "$IN" "$TTS_FILE"
+       else
+        # to speed up the playback process don't convert and use the wav version, directly use the tts_engine encoding instead
+        synthesize_file "$IN" "$OUT"
+      fi
+      IN="$TTS_FILE"
+      ;;
+  esac
+
+  # to speed up the playback process don't convert and use the wav version, directly use the tts_engine encoding instead
+  if [[ "$REMIX" = "yes" || "$PLAYBACK" = "no" ]]; then
+   case "$(print_ext $IN)" in
+    txt|wav|mp3)
+      # convert and normalize all given files
+      convert_file "$IN" "$OUT_TMP"
+
+      # if not megamixing, remix and save all single files
+      if [ "$MEGAMIX" != "yes" ]
+       then
+        if [ "$REMIX" = "yes" ]; then
+            remix_file "$OUT_TMP" "$OUT_TMP_REMIXED"
+            save_file  "$OUT_TMP_REMIXED" "$OUT"
+          else
+           [ "$OUT_TMP" != "$OUT" ] && save_file "$OUT_TMP" "$OUT"
+       fi
+       else
+        # save into this global array all files to megamix (synthesized files and input wav/mp3 files)
+        IN_FILE_MEGAMIX[$ID]="$OUT_TMP"
+        # if this is the last file on megamix array, then make all remixing
+        if [ $ID = ${#IN_FILE[@]} ]
+         then
+          rulem " [$ID/${#IN_FILE[@]}] " - 80
+          megamix_file "$OUT_TMP_MEGAMIXED"
+          remix_file "$OUT_TMP_MEGAMIXED" "$OUT_TMP_REMIXED"
+          save_file  "$OUT_TMP_REMIXED" "$OUT"
+       fi
+      fi
+      ;;
+    *)
+      echo "ERROR: Invalid file extension found: $(print_ext $IN) input:[$IN]"
+      exit 1
+      ;;
+   esac
+  fi
+}
+
+# function used to verify the version of sox commmand
+check_ver() {
+    printf "%03d%03d%03d%03d" $(echo "$@" | tr '.' ' ')
+}
+
+# split the generated tts file into many files to bypass the limit of the engine
+split_tts_file() {
+  local IN="$1"
+  shift
+  local ID="$1"
+
+  echo "INFO: Maximun allowed chars reached for engine ${TTS_ENGINE[$ID]}. allowed:$TTS_LENGTH - current:$TTS_LENGTH_CUR"
+
+  SID=0 ; while read string ; do
+   let SID+=1
+   TTS_ENGINE[$SID]="${TTS_ENGINE[$ID]}"
+   TTS_VOICE[$SID]="${TTS_VOICE[$ID]}"
+   local IN_FILE_SPLIT_TMP="$TMP_DIR/$(print_name "$IN")-$SID.$(print_ext "$IN")"
+   IN_FILE_SPLIT+=($IN_FILE_SPLIT_TMP)
+   #echo -e -n "$IN_FILE_SPLIT_TMP " ; echo $string 
+   echo $string > "$IN_FILE_SPLIT_TMP"
+  done < <(echo -e -n "$(cat "$IN" | parse_tts_string | fold -sw $TTS_LENGTH)\n")
+  #debug
+}
+
+# file name manupilation
+print_path() {
+  echo ${@%/*}
+}
+
+print_fullname() {
+  echo ${@##*/}
+}
+
+print_name() {
+  print_fullname $(echo ${@%.*})
+}
+
+print_ext() {
+  echo ${@##*.}
+}
+
+# print debug info
+debug() {
+  echo "
+IN_FILE ARRAY FIRST VALUE = $IN_FILE'
+IN_FILE ARRAY ALL VALUES  = ${IN_FILE[@]}
+
+IN_FILE_MEGAMIX ARRAY FIRST VALUE = $IN_FILE_MEGAMIX'
+IN_FILE_MEGAMIX ARRAY ALL VALUES  = ${IN_FILE_MEGAMIX[@]}
+
+other variables: 
+================
+     TMP_DIR = $TMP_DIR
+         PWD = $PWD
+          IN = $IN
+         OUT = $OUT
+TTS_LANGUAGE = $TTS_LANGUAGE
+   TTS_VOICE = $TTS_VOICE
+     IN_FILE = $IN_FILE
+    OUT_FILE = $OUT_FILE
+     OUT_PBX = $OUT_PBX
+     OUT_DIR = $OUT_DIR
+       REMIX = $REMIX
+     MEGAMIX = $MEGAMIX
+"
+}
 
 # temp file management
 make_tmp() {
@@ -1057,24 +1299,6 @@ make_tmp() {
   fi
 }
 
-
-check_tts_engine() {
-  # verify if the specified TTS engine exist
-  if [ -z "$(tts_engines_list | grep -w "$1")" ] 
-    then
- 	echo "ERROR: wrong TTS engine synthesizer specified: '$1'"
-	echo
-	echo "please select an engine from the following list:"
-	echo
-	tts_engines_list
-	exit 1
-  fi
-}
-
-check_ver() {
-    printf "%03d%03d%03d%03d" $(echo "$@" | tr '.' ' ')
-}
-
 check_env() {
   # definig all global variables
 
@@ -1093,17 +1317,17 @@ check_env() {
      SOX_OPTS="-G"
   fi
 
-  # load any external TTS engines
-  [ -e "$IZSYNTH_CONFIG_DIR/engines/$TTS_ENGINE.conf" ] && . "$IZSYNTH_CONFIG_DIR/engines/$TTS_ENGINE.conf"
+  # default extension for syntesized files
+  TTS_EXT="mp3"
 
-  # import global tts_engine variables
-  tts_engine_$TTS_ENGINE env #>/dev/null 2>&1
+  # import global tts_engine variables (suppress errors if the engine doesn't exist)
+  tts_engine_${TTS_ENGINE[$ID]} env >/dev/null 2>&1
 
   # set default variables
   [ -z "$PLAYBACK_RESYNTH" ] && PLAYBACK_RESYNTH="yes"
 
   # check if no args are given and make some sanity checks
-  [[ -z "${TTS_STRING}" &&   -z "${IN_FILE}" ]] && echo "ERROR: no text STRING/FILE/DIRECTORY specified, use '-t' or '-i' option - abort." >&2 && exit 1
+  [[ -z "${TTS_STRING}" && -z "${IN_FILE}" ]] && echo "ERROR: no text STRING/FILE/DIRECTORY specified, use '-t' or '-i' option - abort." >&2 && exit 1
 
   # make an input file where paste the given text string
   [ -n "$TTS_STRING" ] &&  IN_FILE=("$TMP_DIR/$(echo "$TTS_STRING" | sed -e 's/[^A-Za-z0-9_-]/_/g' | cut -c-64).txt") && echo "$TTS_STRING" > "$IN_FILE"
@@ -1183,19 +1407,6 @@ check_env() {
     fi
   fi
 
-  #echo IN_FILE_SPLIT[@] = ${IN_FILE_SPLIT[@]}
-  #echo       IN_FILE[@] = ${IN_FILE[@]}
-
-  #exit
-
-  #debug
-  #echo ${#IN_FILE[@]}
-  #echo ${IN_FILE[@]}
-  #echo ${IN_FILE[*]}
-  #echo ${IN_FILE}
-  #echo ${TTS_ENGINE[*]}
-  #exit 1
-
   # verify if a music file is given and the file exist
   [[ ! -z "$MUSIC_FILE" && ! -e "$MUSIC_FILE" ]] && echo "ERROR: the music file '$MUSIC_FILE' doesn't exist or isn't readable" && exit 1
 
@@ -1213,137 +1424,8 @@ check_env() {
 
   # if you pass more that one file as input then megamix them
   [[ "$MEGAMIX" != "no" && ${#IN_FILE[@]} -ge 2 ]] && REMIX="yes" && MEGAMIX="yes"
-
 }
 
-split_tts_file() {
-  local IN="$1"
-  shift
-  local ID="$1"
-
-  echo "INFO: Maximun allowed chars reached for engine ${TTS_ENGINE[$ID]}. allowed:$TTS_LENGTH - current:$TTS_LENGTH_CUR"
-
-  SID=0 ; while read string ; do
-   let SID+=1
-   TTS_ENGINE[$SID]="${TTS_ENGINE[$ID]}"
-   TTS_VOICE[$SID]="${TTS_VOICE[$ID]}"
-   local IN_FILE_SPLIT_TMP="$TMP_DIR/$(print_name "$IN")-$SID.$(print_ext "$IN")"
-   IN_FILE_SPLIT+=($IN_FILE_SPLIT_TMP)
-   #echo -e -n "$IN_FILE_SPLIT_TMP " ; echo $string 
-   echo $string > "$IN_FILE_SPLIT_TMP"
-  done < <(echo -e -n "$(cat "$IN" | parse_tts_string | fold -sw $TTS_LENGTH)\n")
-  #debug
-}
-
-# file name manupilation
-print_path() {
-  echo ${@%/*}
-}
-
-print_fullname() {
-  echo ${@##*/}
-}
-
-print_name() {
-  print_fullname $(echo ${@%.*})
-}
-
-print_ext() {
-  echo ${@##*.}
-}
-
-
-debug() {
-  echo "
-IN_FILE ARRAY FIRST VALUE = $IN_FILE'
-IN_FILE ARRAY ALL VALUES  = ${IN_FILE[@]}
-
-IN_FILE_MEGAMIX ARRAY FIRST VALUE = $IN_FILE_MEGAMIX'
-IN_FILE_MEGAMIX ARRAY ALL VALUES  = ${IN_FILE_MEGAMIX[@]}
-
-other variables: 
-================
-     TMP_DIR = $TMP_DIR
-         PWD = $PWD
-          IN = $IN
-         OUT = $OUT
-TTS_LANGUAGE = $TTS_LANGUAGE
-   TTS_VOICE = $TTS_VOICE
-     IN_FILE = $IN_FILE
-    OUT_FILE = $OUT_FILE
-     OUT_PBX = $OUT_PBX
-     OUT_DIR = $OUT_DIR
-       REMIX = $REMIX
-     MEGAMIX = $MEGAMIX
-"
-}
-
-assemble_file() {
-  local IN="$1"
-  shift
-  local OUT="$1"
-
-  # local variables
-  local OUT_TMP="$TMP_DIR/$(print_name $IN).wav"
-  local OUT_TMP_REMIXED="$TMP_DIR/$(print_name $IN).remixed.wav"
-  local OUT_TMP_MEGAMIXED="$TMP_DIR/$(print_name $IN).megamixed.wav"
-
-  case "$(print_ext $IN)" in
-    txt)
-      # verify if the specified TTS engine is supported
-      [[ -z "${TTS_ENGINE[$ID]}" || ! -z "$(check_tts_engine ${TTS_ENGINE[$ID]})" ]] && echo "ERROR: the TTS Engine '${TTS_ENGINE[$ID]}' doesn't exist, or is not supported by the $NAME" && exit 1
-
-      # verify if the selected TTS voice is supported by the TTS engine
-      [[ -z "${TTS_VOICE[$ID]}" || -z "$(tts_engine_${TTS_ENGINE[$ID]} voice ${TTS_VOICE[$ID]})" ]] && echo "ERROR: the TTS voice '${TTS_VOICE[$ID]}' doesn't exist, or is not supported by the engine '${TTS_ENGINE[$ID]}'" && exit 1
-
-      #local TTS_FILE="$TMP_DIR/${TTS_ENGINE[$ID]}-${TTS_VOICE[$ID]}-$(print_name $IN).$TTS_EXT"
-      local TTS_FILE="$TMP_DIR/$(print_name $IN).$TTS_EXT"
-      if [[ "$REMIX" = "yes" || "$PLAYBACK" = "no" ]]; then
-        synthesize_file "$IN" "$TTS_FILE"
-       else
-        # to speed up the playback process don't convert and use the wav version, directly use the tts_engine encoding instead
-        synthesize_file "$IN" "$OUT"
-      fi
-      IN="$TTS_FILE"
-      ;;
-  esac
-
-  # to speed up the playback process don't convert and use the wav version, directly use the tts_engine encoding instead
-  if [[ "$REMIX" = "yes" || "$PLAYBACK" = "no" ]]; then
-   case "$(print_ext $IN)" in
-    txt|wav|mp3)
-      # convert and normalize all given files
-      convert_file "$IN" "$OUT_TMP"
-
-      # if not megamixing, remix and save all single files
-      if [ "$MEGAMIX" != "yes" ]
-       then
-        if [ "$REMIX" = "yes" ]; then
-            remix_file "$OUT_TMP" "$OUT_TMP_REMIXED"
-            save_file  "$OUT_TMP_REMIXED" "$OUT"
-          else
-           [ "$OUT_TMP" != "$OUT" ] && save_file "$OUT_TMP" "$OUT"
-       fi
-       else
-        # save into this global array all files to megamix (synthesized files and input wav/mp3 files)
-        IN_FILE_MEGAMIX[$ID]="$OUT_TMP"
-        # if this is the last file on megamix array, then make all remixing
-        if [ $ID = ${#IN_FILE[@]} ]
-         then
-          rulem " [$ID/${#IN_FILE[@]}] " - 80
-          megamix_file "$OUT_TMP_MEGAMIXED"
-          remix_file "$OUT_TMP_MEGAMIXED" "$OUT_TMP_REMIXED"
-          save_file  "$OUT_TMP_REMIXED" "$OUT"
-       fi
-      fi
-      ;;
-    *)
-      echo "ERROR: Invalid file extension found: $(print_ext $IN) input:[$IN]"
-      exit 1
-      ;;
-   esac
-  fi
-}
 
 # all begin here
 main() {
@@ -1357,8 +1439,7 @@ main() {
   check_env
 
   # convert music file before assembling
-  if [[ ! -z "$MUSIC_FILE" && "$(print_ext $MUSIC_FILE)" != "wav" ]]
-   then
+  if [[ ! -z "$MUSIC_FILE" && "$(print_ext $MUSIC_FILE)" != "wav" ]]; then
     convert_file "$MUSIC_FILE" "$TMP_DIR/$(print_name $MUSIC_FILE).wav"
     MUSIC_FILE="$TMP_DIR/$(print_name $MUSIC_FILE).wav"
   fi
@@ -1371,25 +1452,29 @@ main() {
 
     rulem " [$ID/${#IN_FILE[@]}] - $NAME Name:[$(print_name $IN)] " = 80
 
-    if   [ "$PLAYBACK" = "yes" ]; then
+    # define the output file name
+    if [ "$PLAYBACK" = "yes" ]; then
       # to speed up the playback process don't convert and use the wav version, directly use the tts_engine encoding instead
       [ "$REMIX" = "yes" ] && local OUT="$OUT_DIR/$(print_name $IN).wav" || local OUT="$OUT_DIR/$(print_name $IN).$TTS_EXT"
      else
       local OUT="$TMP_DIR/$(print_name $IN).wav"
     fi
 
-    if [[ -e "$OUT" && "$PLAYBACK_RESYNTH" = "no" ]]
-      then
-        echo "File exist   - input:[$OUT]"
-        #echo "File exist   - input:[$OUT] size:[$(show_size "$OUT")]"
+    if [[ -e "$OUT" && "$PLAYBACK_RESYNTH" = "no" ]]; then
         # resynth the audio file only if the previous saved file was corrupted or with wrong format
-        [ "$(show_mime_brief "$OUT")" != "audio" ] && assemble_file "$IN" "$OUT"
+        if [ "$(show_mime_brief "$OUT")" != "audio" ]; then
+        	echo "File exist   - input:[$OUT] status:[corrupted] action:[resinthesizing]"
+		assemble_file "$IN" "$OUT"
+	else
+		#echo "File exist   - input:[$OUT] size:[$(show_size "$OUT")] status:[good]"
+		echo "File exist   - input:[$OUT]"
+	fi
       else
         assemble_file "$IN" "$OUT"
     fi
 
     if  [ "$PLAYBACK" = "yes" ]; then
-        play_file "$OUT"
+        playback_file "$OUT"
       else
         convert_file_pbx "$OUT" "$OUT_DIR"
     fi
@@ -1400,8 +1485,7 @@ main() {
    # the megamix file name is always taken from the first input name
    [ "$PLAYBACK" = "yes" ] && local OUT_MEGAMIX="$OUT_DIR/$(print_name ${IN_FILE[1]}).wav" || local OUT_MEGAMIX="$TMP_DIR/$(print_name ${IN_FILE[1]}).wav"
 
-   if [[ ! -e "$OUT_MEGAMIX" || "$PLAYBACK_RESYNTH" = "yes" ]]
-      then
+   if [[ ! -e "$OUT_MEGAMIX" || "$PLAYBACK_RESYNTH" = "yes" ]]; then
         # remix all given files in one big file
         ID=0 ; for IN in "${IN_FILE[@]}"; do
          let ID+=1
@@ -1412,12 +1496,15 @@ main() {
    fi
    #debug
 
-   if [ "$PLAYBACK" = "yes" ]
-    then
-     play_file "$OUT_MEGAMIX"
+   let ID+=1
+   rulem " [$ID/${#IN_FILE[@]}] - $NAME Name:[$(print_name $IN)] " = 80
+
+   if [ "$PLAYBACK" = "yes" ]; then
+     playback_file "$OUT_MEGAMIX"
     else
      convert_file_pbx "$OUT_MEGAMIX" "$OUT_DIR"
    fi
+   rulem " [$ID/${#IN_FILE[@]}] " - 80
  fi
 }
 
@@ -1487,12 +1574,12 @@ Background music management:
 
 Soundcard audio playback options:
   -x                         Playback the generated files using the soundcard speakers (current: $PLAYBACK) (no = assemble and export files format for PBX usage)
+  -k                         Playback command (current: $PLAYBACK_COMMAND)
+  -K                         Playback command options (current: $([ ! -z "$PLAYBACK_COMMAND_OPTS" ] && echo -e -n "$PLAYBACK_COMMAND_OPTS" || echo -e -n "none"))
   -d                         Playback output device (current: $PLAYBACK_DEVICE)
   -D                         List available playback output devices
-  -k                         Playback command (current: $PLAYBACK_COMMAND)
-  -K                         Playback command extra options (current: $PLAYBACK_COMMAND_OPTS)
-  -b                         Playback in background detaching the $NAME command (current: $PLAYBACK_BACKGROUND) (only if '-x' = yes)
   -W     <volume>            Change the playback soundcard output volume (current: $([ ! -z "$PLAYBACK_VOLUME" ] && echo -e -n "$PLAYBACK_VOLUME" || echo -e -n "none) (use a number from 0 to 100"))
+  -b                         Playback in background detaching the $NAME command (current: $PLAYBACK_BACKGROUND) (only if '-x' = yes)
   -r                         Remove synthesized file after playback
 
 Output file options:
@@ -1500,7 +1587,7 @@ Output file options:
   -s                         Split destination audio files into audio formats sub directories (current: $SPLIT_OUT_FILE) (only if '-x' = no)
 
 Misc options:
-  -C                         Write/Overwrite the user config into $IZSYNTH_CONFIG file using the default variables
+  -C                         Write/Overwrite the config file using the command arguments or the default izsynth variables (file: $IZSYNTH_CONFIG_FILE)
   -h                         Display this help menu
   -H                         Display the '$TTS_ENGINE' TTS Engine help menu
   -E                         Display $NAME usage examples
@@ -1570,9 +1657,8 @@ while getopts "t:i:o:m:S:p:P:F:M:T:e:d:k:K:v:W:slrLwxDbChHEV" option ; do
         [ "$SPLIT_OUT_FILE" != "yes" ] && SPLIT_OUT_FILE="yes" || SPLIT_OUT_FILE="no"
 	;;
     l) # list installed TTS voice pack
-	make_tmp
 	tts_engines_load
-	check_tts_engine
+	tts_engines_check $TTS_ENGINE
         tts_engine_$TTS_ENGINE voices
 	exit 0
 	;;
@@ -1592,10 +1678,10 @@ while getopts "t:i:o:m:S:p:P:F:M:T:e:d:k:K:v:W:slrLwxDbChHEV" option ; do
     x) # Assemble and save PBX recordings, otherwise playback the generated files using the soundcard speakers
         [ "$PLAYBACK" != "yes" ] && PLAYBACK="yes" || PLAYBACK="no"
 	;;
-    d) # mplayer playback device
+    d) # hardware playback device
         PLAYBACK_DEVICE="${OPTARG}"
 	;;
-    D) # list mplayer playback devices
+    D) # list hardware playback devices (alsa-utils package must be installed)
         aplay -l | grep ^card | while read devices ; do
           card=$(echo $devices | awk '{print $2}' | tr -d ":")
           device=$(echo $devices | awk -F", " '{print $2}' | awk '{print $2}' | tr -d ":")
@@ -1662,9 +1748,10 @@ elif [[ ! -z "$*" && -z "$TTS_STRING" && -z "$IN_FILE" ]]; then
   TTS_STRING="$*"
 fi
 
+# here begin the running of izsynth
 main
 
-# if we no error occur, then erase all temp files and directories
+# if we no error occur, then cleanup all temporary files and directories
 trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 
 # END
@@ -1708,6 +1795,10 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 
 # ChangeLog:
 # ============================================================================
+# 4.5 - 20161218
+# - intruduced playback engines via addons funcionts (currently implemented mplayer only)
+# - many script refactoring
+
 # 4.4 - 20161028
 # - implemented -C option to write/overwrite the izsynth user config file
 # - some sanity checks to detect the $HOME directory of user
