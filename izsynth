@@ -13,8 +13,8 @@
 # script variables
 NAME="izsynth"
 DESCRIPTION="TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems"
-VERSION="4.5"
-VERSION_DATE="20161223"
+VERSION="4.6"
+VERSION_DATE="20161228"
 
 #####################################
 ## default suggested user variables to change 
@@ -900,12 +900,14 @@ Step 3: $TTS_ENGINE engine specific config and variables:
 
 confirm () {
     # call with a prompt string or use a default
-    read -r -p "${1:-Are you sure? [y/N]} " response
+    read -r -p "${1:-Are you sure? [y/N]} " -n 1 response
     case $response in
-        [yY][eE][sS]|[yY]) 
+        [yY][eE][sS]|[yY])
+            echo
             true
             ;;
         *)
+            echo
             false
             ;;
     esac
@@ -1068,24 +1070,24 @@ convert_file_pbx() {
                         SOX_OPTS_FORMAT="-t wav -r 44100"
                         ;;
                 wav)
-                        SOX_OPTS_FORMAT="-t wav -r 8000"
+                        SOX_OPTS_FORMAT="-t wav -r 8000 -c 1"
                         ;;
                 gsm)
-                        SOX_OPTS_FORMAT="-t gsm -r 8000"
+                        SOX_OPTS_FORMAT="-t gsm -r 8000 -c 1"
                         ;;
                 ulaw)
-                        SOX_OPTS_FORMAT="-t ul -r 8000"
+                        SOX_OPTS_FORMAT="-t ul -r 8000 -c 1"
                         ;;
                 alaw)
-                        SOX_OPTS_FORMAT="-t al -r 8000"
+                        SOX_OPTS_FORMAT="-t al -r 8000 -c 1"
                         ;;
                 slin)
-                        SOX_OPTS_FORMAT="-t raw -r 8000"
+                        SOX_OPTS_FORMAT="-t raw -r 8000 -c 1"
                         ;;
       esac
 
       # convert to pbx formats
-      sox -V1 $SOX_OPTS "$IN" $SOX_OPTS_FORMAT "$OUT" remix 1
+      sox -V1 $SOX_OPTS "$IN" $SOX_OPTS_FORMAT "$OUT" lowpass 4000
 
       # display log informations
       echo "Saving PBX   - input:[$IN] output:[$OUT] size:[$(show_size "$OUT")] type:[$(show_mime "$OUT")]"
@@ -1112,13 +1114,13 @@ remix_file() {
       let local TTS_PAD_BEGIN_REAL="$MUSIC_START+$TTS_PAD_BEGIN"
       echo -e -n "Remixing     - input:[$IN] music:[$MUSIC_FILE] music_volume:[$MUSIC_VOLUME] tts_volume:[$TTS_VOLUME] output:[$OUT] "
       # mix tts voice with background music
-      sox -V1 $SOX_OPTS_MUSIC -m "$MUSIC_FILE" "| sox $SOX_OPTS $IN -p pad $TTS_PAD_BEGIN_REAL" "$OUT" trim $MUSIC_START fade h $MUSIC_FADE $IN_DURATION $MUSIC_FADE remix 1
+      sox -V1 $SOX_OPTS_MUSIC -m "$MUSIC_FILE" "| sox $SOX_OPTS $IN -p pad $TTS_PAD_BEGIN_REAL" "$OUT" trim $MUSIC_START fade h $MUSIC_FADE $IN_DURATION $MUSIC_FADE remix 1,2v0.2 1,2v0.2
       local RETVAL=$?
       echo -e -n "size:[$(show_size $OUT)] duration:[$IN_DURATION] result:"
     else
       echo -e -n "Remixing     - input:[$IN] tts_volume:[$TTS_VOLUME] output:[$OUT] "
       # remix without background music
-      sox -V1 $SOX_OPTS "$IN" "$OUT" remix 1
+      sox -V1 $SOX_OPTS "$IN" "$OUT"
       local RETVAL=$?
       echo -e -n "size:[$(show_size $OUT)] duration:[$IN_DURATION] result:"
   fi
@@ -1573,7 +1575,7 @@ Background music management:
   -M     <volume>            Background music volume (current: $([ ! -z "$MUSIC_VOLUME" ] && echo -e -n "$MUSIC_VOLUME" || echo -e -n "none) (use a number from 0.01 to 1"))
 
 Soundcard audio playback options:
-  -x                         Playback the generated files using the soundcard speakers (current: $PLAYBACK) (no = assemble and export files format for PBX usage)
+  -x                         Playback the generated files using the soundcard speakers (current: $PLAYBACK) (no = save audio files for PBX usage)
   -k                         Playback command (current: $PLAYBACK_COMMAND)
   -K                         Playback command options (current: $([ ! -z "$PLAYBACK_COMMAND_OPTS" ] && echo -e -n "$PLAYBACK_COMMAND_OPTS" || echo -e -n "none"))
   -d                         Playback output device (current: $PLAYBACK_DEVICE)
@@ -1682,15 +1684,19 @@ while getopts "t:i:o:m:S:p:P:F:M:T:e:d:k:K:v:W:slrLwxDbChHEV" option ; do
         PLAYBACK_DEVICE="${OPTARG}"
 	;;
     D) # list hardware playback devices (alsa-utils package must be installed)
-        aplay -l | grep ^card | while read devices ; do
+	list_playback_devices() {
+	 echo "Device: Description:"
+	 echo "------- ------------"
+         aplay -l | grep ^card | while read devices ; do
           card=$(echo $devices | awk '{print $2}' | tr -d ":")
           device=$(echo $devices | awk -F", " '{print $2}' | awk '{print $2}' | tr -d ":")
-          description=$(echo $devices | sed 's/\[/(/g' | sed 's/\]/)/g' | awk -F "[()]" '{print $4}')
+          description=$(echo $devices | sed 's/\[/(/g' | sed 's/\]/)/g' | awk -F "[()]" '{print $4}' | sed 's/ /-/g')
           echo "alsa:device=hw=$card.$device     $description"
-        done
-
-	# list all user custom software devices
-	cat $HOME/.asoundrc 2>/dev/null | grep ^pcm | awk '{print "alsa:device="$1}' | sed 's/pcm.//'
+         done
+	 # list all user custom software devices
+	 cat $HOME/.asoundrc 2>/dev/null | grep ^pcm | awk '{print "alsa:device="$1}' | sed 's/pcm.//'
+	} 
+        list_playback_devices | column -c1 -t
 
 	exit 0
 	;;
@@ -1706,7 +1712,7 @@ while getopts "t:i:o:m:S:p:P:F:M:T:e:d:k:K:v:W:slrLwxDbChHEV" option ; do
     C) # write/overwrite user config file
         if [ -e "$IZSYNTH_CONFIG_FILE" ]; then
           echo "WARNING: the user config file '$IZSYNTH_CONFIG_FILE' already exist"
-	  confirm "Do you want overwrite it? [y/N]" && write_default_config
+	  confirm "Do you want overwrite it? [y/N]:" && write_default_config
           [ $? = 0 ] && echo "'$IZSYNTH_CONFIG_FILE' config file written successfully" || echo "ERROR writing '$IZSYNTH_CONFIG_FILE' config file"
          else
           write_default_config
@@ -1795,8 +1801,12 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 
 # ChangeLog:
 # ============================================================================
+# 4.6 - 20161228
+# - some sox command optimizations
+# - add sox "lowpass 4000" when converting to pbx format for better results
+
 # 4.5 - 20161218
-# - intruduced playback engines via addons funcionts (currently implemented mplayer only)
+# - introduced playback engines (currently implemented mplayer only)
 # - many script refactoring
 
 # 4.4 - 20161028
