@@ -90,7 +90,8 @@ MUSIC_FADE="5"
 #MUSIC_VOLUME="0.1"
 
 # detect HOME variable if the current shell doesn't set it
-[ -z "$HOME" ] && HOME="$(cd >/dev/null 2>&1; pwd)"
+#[ -z "$HOME" ] && HOME="$(cd >/dev/null 2>&1; pwd)"
+[ -z "$HOME" ] && HOME="$(pwd)"
 
 # read external izsynth config file (used for service API and external variables override)
 IZSYNTH_CONFIG_DIR="$HOME/.config/$NAME"
@@ -755,6 +756,9 @@ EXPORT_AUDIO=\"$EXPORT_AUDIO\"
 
 # assemble and export to the following audio formats
 EXPORT_AUDIO_FORMATS=\"$EXPORT_AUDIO_FORMATS\"
+
+# split destination audio files into audio formats sub directories
+EXPORT_AUDIO_FORMAT_SUBDIR=\"$EXPORT_AUDIO_FORMAT_SUBDIR\"
 
 # realtime audio playback variables
 PLAYBACK=\"$PLAYBACK\"
