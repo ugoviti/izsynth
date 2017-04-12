@@ -13,8 +13,8 @@
 # script variables
 NAME="izsynth"
 DESCRIPTION="TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems"
-VERSION="4.6"
-VERSION_DATE="20161228"
+VERSION="4.7"
+VERSION_DATE="20170411"
 
 #####################################
 ## default suggested user variables to change 
@@ -26,6 +26,18 @@ TTS_ENGINE="naturalreaders"
 # default TTS voice (null = let TTS engine to set default voice. it will use english)
 TTS_VOICE="Peter"
 
+# resynth the file if it already exist
+OVERWRITE="no"
+
+# assemble and export converted PBX recordings
+EXPORT_AUDIO="no"
+
+# default audio formats
+EXPORT_AUDIO_FORMATS="44khz.wav wav gsm ulaw alaw slin"
+
+# split destination audio files into audio formats sub directories
+EXPORT_AUDIO_FORMAT_SUBDIR="yes"
+
 # playback instead generate PBX files
 PLAYBACK="yes"
 
@@ -34,9 +46,6 @@ PLAYBACK_REMOVE="no"
 
 # play the file in background, otherwise foreground
 PLAYBACK_BACKGROUND="yes"
-
-# resynth the file if it already exist
-PLAYBACK_RESYNTH="no"
 
 # command used to play the synthesized audio file (mplayer example)
 PLAYBACK_COMMAND="mplayer"
@@ -55,9 +64,6 @@ PLAYBACK_COMMAND="mplayer"
 
 # default mandatory commands
 COMMANDS="curl md5sum file iconv soxi sox lame"
-
-# default audio formats
-AUDIO_FORMATS_PBX="44khz.wav wav gsm ulaw alaw slin"
 
 # default base temp directory (comment if you want use the system default directory base, ex. /tmp)
 TMP_DIR_BASE="/dev/shm"
@@ -83,11 +89,8 @@ MUSIC_FADE="5"
 # default music volume
 #MUSIC_VOLUME="0.1"
 
-# split destination audio files into audio formats sub directories
-SPLIT_OUT_FILE="yes"
-
 # detect HOME variable if the current shell doesn't set it
-[ -z "$HOME" ] && HOME="$(cd ; pwd)"
+[ -z "$HOME" ] && HOME="$(cd >/dev/null 2>&1; pwd)"
 
 # read external izsynth config file (used for service API and external variables override)
 IZSYNTH_CONFIG_DIR="$HOME/.config/$NAME"
@@ -96,6 +99,10 @@ IZSYNTH_CONFIG_FILE="$IZSYNTH_CONFIG_DIR/$NAME.conf"
 # make default izsynth config directory if not exist
 [ ! -e "$IZSYNTH_CONFIG_DIR/engines" ] && mkdir -p "$IZSYNTH_CONFIG_DIR/engines"
 [ -e "$IZSYNTH_CONFIG_FILE" ] && . "$IZSYNTH_CONFIG_FILE"
+
+
+## compatibility and deprecated variabiles
+[ -z "$PLAYBACK_OVERWRITE" ] && PLAYBACK_OVERWRITE="$OVERWRITE"
 
 
 ###########################################################################################
@@ -740,6 +747,15 @@ TTS_ENGINE=\"$TTS_ENGINE\"
 # default tts voice (null = let tts engine to set default voice. it will use english)
 TTS_VOICE=\"$TTS_VOICE\"
  
+# resynth the file if it already exist
+OVERWRITE=\"$OVERWRITE\"
+
+# assemble and export converted PBX recordings
+EXPORT_AUDIO=\"$EXPORT_AUDIO\"
+
+# assemble and export to the following audio formats
+EXPORT_AUDIO_FORMATS=\"$EXPORT_AUDIO_FORMATS\"
+
 # realtime audio playback variables
 PLAYBACK=\"$PLAYBACK\"
  
@@ -748,10 +764,7 @@ PLAYBACK_REMOVE=\"$PLAYBACK_REMOVE\"
  
 # play the file in background, otherwise foreground
 PLAYBACK_BACKGROUND=\"$PLAYBACK_BACKGROUND\"
- 
-# resynth the file if it already exist
-PLAYBACK_RESYNTH=\"$PLAYBACK_RESYNTH\"
- 
+
 # command used to play the synthesized audio file
 PLAYBACK_COMMAND=\"$PLAYBACK_COMMAND\"
  
@@ -1046,7 +1059,7 @@ convert_file() {
 }
 
 # convert the input file to the asterisk pbx supported formats
-convert_file_pbx() {
+export_file() {
   local IN="$1"
   shift
   local OUT_DIR="$1"
@@ -1054,10 +1067,10 @@ convert_file_pbx() {
   local AUDIO_FORMAT
   local SOX_OPTS_FORMAT
 
-  for AUDIO_FORMAT in $AUDIO_FORMATS_PBX
+  for AUDIO_FORMAT in $EXPORT_AUDIO_FORMATS
     do
       # set the destination pbx file name
-      if [ "$SPLIT_OUT_FILE" = "yes" ]
+      if [ "$EXPORT_AUDIO_FORMAT_SUBDIR" = "yes" ]
         then
           mkdir -p "$OUT_DIR/$AUDIO_FORMAT"
           OUT="$OUT_DIR/$AUDIO_FORMAT/$(print_name $IN).$AUDIO_FORMAT"
@@ -1086,11 +1099,15 @@ convert_file_pbx() {
                         ;;
       esac
 
-      # convert to pbx formats
-      sox -V1 $SOX_OPTS "$IN" $SOX_OPTS_FORMAT "$OUT" lowpass 4000
+      if [[ ! -e "$OUT" || "$OVERWRITE" = "yes" ]]; then
+        # convert to pbx formats
+        sox -V1 $SOX_OPTS "$IN" $SOX_OPTS_FORMAT "$OUT" lowpass 4000
 
-      # display log informations
-      echo "Saving PBX   - input:[$IN] output:[$OUT] size:[$(show_size "$OUT")] type:[$(show_mime "$OUT")]"
+        # display log informations
+        echo "Saving PBX   - input:[$IN] output:[$OUT] size:[$(show_size "$OUT")] type:[$(show_mime "$OUT")]"
+       else
+        echo "File PBX exist - input:[$OUT]"
+      fi
   done
 }
 
@@ -1140,9 +1157,9 @@ assemble_file() {
   local OUT="$1"
 
   # local variables
-  local OUT_TMP="$TMP_DIR/$(print_name $IN).wav"
-  local OUT_TMP_REMIXED="$TMP_DIR/$(print_name $IN).remixed.wav"
-  local OUT_TMP_MEGAMIXED="$TMP_DIR/$(print_name $IN).megamixed.wav"
+  local OUT_TMP="$TMP_DIR/$(print_name $IN).44khz.wav"
+  local OUT_TMP_REMIXED="$TMP_DIR/$(print_name $IN).remixed.44khz.wav"
+  local OUT_TMP_MEGAMIXED="$TMP_DIR/$(print_name $IN).megamixed.44khz.wav"
 
   # if the input file is a text file, synthesize it
   case "$(print_ext $IN)" in
@@ -1242,7 +1259,7 @@ print_fullname() {
 }
 
 print_name() {
-  print_fullname $(echo ${@%.*})
+  print_fullname $(echo ${@%%.*})
 }
 
 print_ext() {
@@ -1326,7 +1343,7 @@ check_env() {
   tts_engine_${TTS_ENGINE[$ID]} env >/dev/null 2>&1
 
   # set default variables
-  [ -z "$PLAYBACK_RESYNTH" ] && PLAYBACK_RESYNTH="yes"
+  [ -z "$OVERWRITE" ] && OVERWRITE="yes"
 
   # check if no args are given and make some sanity checks
   [[ -z "${TTS_STRING}" && -z "${IN_FILE}" ]] && echo "ERROR: no text STRING/FILE/DIRECTORY specified, use '-t' or '-i' option - abort." >&2 && exit 1
@@ -1442,8 +1459,8 @@ main() {
 
   # convert music file before assembling
   if [[ ! -z "$MUSIC_FILE" && "$(print_ext $MUSIC_FILE)" != "wav" ]]; then
-    convert_file "$MUSIC_FILE" "$TMP_DIR/$(print_name $MUSIC_FILE).wav"
-    MUSIC_FILE="$TMP_DIR/$(print_name $MUSIC_FILE).wav"
+    convert_file "$MUSIC_FILE" "$TMP_DIR/$(print_name $MUSIC_FILE).44khz.wav"
+    MUSIC_FILE="$TMP_DIR/$(print_name $MUSIC_FILE).44khz.wav"
   fi
 
   # assemble all given files processing array contents
@@ -1455,14 +1472,17 @@ main() {
     rulem " [$ID/${#IN_FILE[@]}] - $NAME Name:[$(print_name $IN)] " = 80
 
     # define the output file name
-    if [ "$PLAYBACK" = "yes" ]; then
+    if   [[ "$PLAYBACK" = "yes" ]]; then
       # to speed up the playback process don't convert and use the wav version, directly use the tts_engine encoding instead
-      [ "$REMIX" = "yes" ] && local OUT="$OUT_DIR/$(print_name $IN).wav" || local OUT="$OUT_DIR/$(print_name $IN).$TTS_EXT"
+      [ "$REMIX" = "yes" ] && local OUT="$OUT_DIR/$(print_name $IN).44khz.wav" || local OUT="$OUT_DIR/$(print_name $IN).$TTS_EXT"
+    elif [[ "$EXPORT_AUDIO" = "yes" && "$OVERWRITE" = "no" ]]; then
+      # to speed up the playback process don't convert and use the wav version, directly use the tts_engine encoding instead
+      [ "$REMIX" = "yes" ] && local OUT="$OUT_DIR/$(print_name $IN).44khz.wav" || local OUT="$OUT_DIR/$(print_name $IN).$TTS_EXT"
      else
-      local OUT="$TMP_DIR/$(print_name $IN).wav"
+      local OUT="$TMP_DIR/$(print_name $IN).44khz.wav"
     fi
 
-    if [[ -e "$OUT" && "$PLAYBACK_RESYNTH" = "no" ]]; then
+    if [[ -e "$OUT" && "$OVERWRITE" = "no" ]]; then
         # resynth the audio file only if the previous saved file was corrupted or with wrong format
         if [ "$(show_mime_brief "$OUT")" != "audio" ]; then
         	echo "File exist   - input:[$OUT] status:[corrupted] action:[resinthesizing]"
@@ -1475,19 +1495,19 @@ main() {
         assemble_file "$IN" "$OUT"
     fi
 
-    if  [ "$PLAYBACK" = "yes" ]; then
+    if   [[ "$PLAYBACK" = "yes" && "$EXPORT_AUDIO" = "no"  ]]; then
         playback_file "$OUT"
-      else
-        convert_file_pbx "$OUT" "$OUT_DIR"
+    elif [[ "$PLAYBACK" = "no"  && "$EXPORT_AUDIO" = "yes" ]]; then
+ 	export_file "$OUT" "$OUT_DIR"
     fi
     rulem " [$ID/${#IN_FILE[@]}] " - 80
    done
   else
    #debug
    # the megamix file name is always taken from the first input name
-   [ "$PLAYBACK" = "yes" ] && local OUT_MEGAMIX="$OUT_DIR/$(print_name ${IN_FILE[1]}).wav" || local OUT_MEGAMIX="$TMP_DIR/$(print_name ${IN_FILE[1]}).wav"
+   [ "$PLAYBACK" = "yes" ] && local OUT_MEGAMIX="$OUT_DIR/$(print_name ${IN_FILE[1]}).44khz.wav" || local OUT_MEGAMIX="$TMP_DIR/$(print_name ${IN_FILE[1]}).44khz.wav"
 
-   if [[ ! -e "$OUT_MEGAMIX" || "$PLAYBACK_RESYNTH" = "yes" ]]; then
+   if [[ ! -e "$OUT_MEGAMIX" || "$OVERWRITE" = "yes" ]]; then
         # remix all given files in one big file
         ID=0 ; for IN in "${IN_FILE[@]}"; do
          let ID+=1
@@ -1501,10 +1521,10 @@ main() {
    let ID+=1
    rulem " [$ID/${#IN_FILE[@]}] - $NAME Name:[$(print_name $IN)] " = 80
 
-   if [ "$PLAYBACK" = "yes" ]; then
+   if  [[ "$PLAYBACK" = "yes" && "$EXPORT_AUDIO" = "no"  ]]; then
      playback_file "$OUT_MEGAMIX"
-    else
-     convert_file_pbx "$OUT_MEGAMIX" "$OUT_DIR"
+   elif [[ "$PLAYBACK" = "no" && "$EXPORT_AUDIO" = "yes" ]]; then
+     export_file "$OUT_MEGAMIX" "$OUT_DIR"
    fi
    rulem " [$ID/${#IN_FILE[@]}] " - 80
  fi
@@ -1575,18 +1595,20 @@ Background music management:
   -M     <volume>            Background music volume (current: $([ ! -z "$MUSIC_VOLUME" ] && echo -e -n "$MUSIC_VOLUME" || echo -e -n "none) (use a number from 0.01 to 1"))
 
 Soundcard audio playback options:
-  -x                         Playback the generated files using the soundcard speakers (current: $PLAYBACK) (no = save audio files for PBX usage)
+  -b                         Playback the generated files using the soundcard speakers (current: $PLAYBACK)
+  -B                         Playback in background detaching the $NAME command (current: $PLAYBACK_BACKGROUND) (only if PLAYBACK=yes)
   -k                         Playback command (current: $PLAYBACK_COMMAND)
   -K                         Playback command options (current: $([ ! -z "$PLAYBACK_COMMAND_OPTS" ] && echo -e -n "$PLAYBACK_COMMAND_OPTS" || echo -e -n "none"))
   -d                         Playback output device (current: $PLAYBACK_DEVICE)
   -D                         List available playback output devices
   -W     <volume>            Change the playback soundcard output volume (current: $([ ! -z "$PLAYBACK_VOLUME" ] && echo -e -n "$PLAYBACK_VOLUME" || echo -e -n "none) (use a number from 0 to 100"))
-  -b                         Playback in background detaching the $NAME command (current: $PLAYBACK_BACKGROUND) (only if '-x' = yes)
   -r                         Remove synthesized file after playback
 
 Output file options:
-  -w                         Overwrite the synthesized file (current: $PLAYBACK_RESYNTH) (no = keep the generated file for later usage)
-  -s                         Split destination audio files into audio formats sub directories (current: $SPLIT_OUT_FILE) (only if '-x' = no)
+  -x                         Assemble and export converted PBX recordings (current: $EXPORT_AUDIO) (yes = this will assume PLAYBACK=no and OVERWRITE=yes)
+  -X                         Export recorings using the following audio formats (current: \"$EXPORT_AUDIO_FORMATS\") (valid only if EXPORT_AUDIO=yes))
+  -w                         Overwrite the synthesized file (current: $OVERWRITE) (no = keep the generated file for later usage)
+  -s                         Split destination audio files into audio formats sub directories (current: $EXPORT_AUDIO_FORMAT_SUBDIR) (valid only if EXPORT_AUDIO=yes)
 
 Misc options:
   -C                         Write/Overwrite the config file using the command arguments or the default izsynth variables (file: $IZSYNTH_CONFIG_FILE)
@@ -1613,7 +1635,7 @@ fi
 # Usage: scriptname -options
 # Note: dash (-) necessary
 
-while getopts "t:i:o:m:S:p:P:F:M:T:e:d:k:K:v:W:slrLwxDbChHEV" option ; do
+while getopts "t:i:o:m:S:p:P:F:M:T:e:v:d:k:K:W:X:slLrxwbBDChHEV" option ; do
   case $option in
     t) # text string to synthesize
         TTS_STRING="${OPTARG}"
@@ -1656,7 +1678,7 @@ while getopts "t:i:o:m:S:p:P:F:M:T:e:d:k:K:v:W:slrLwxDbChHEV" option ; do
         TTS_VOICE="${OPTARG}"
 	;;
     s) # split destination audio files into audio formats sub directories
-        [ "$SPLIT_OUT_FILE" != "yes" ] && SPLIT_OUT_FILE="yes" || SPLIT_OUT_FILE="no"
+        [ "$EXPORT_AUDIO_FORMAT_SUBDIR" != "yes" ] && EXPORT_AUDIO_FORMAT_SUBDIR="yes" || EXPORT_AUDIO_FORMAT_SUBDIR="no"
 	;;
     l) # list installed TTS voice pack
 	tts_engines_load
@@ -1671,14 +1693,31 @@ while getopts "t:i:o:m:S:p:P:F:M:T:e:d:k:K:v:W:slrLwxDbChHEV" option ; do
     W) # change the playback volume
         PLAYBACK_VOLUME="${OPTARG}"
 	;;
-    r) # Remove synthesized file after playback
+    r) # remove synthesized file after playback
 	PLAYBACK_REMOVE="yes"
 	;;
-    w) # overWrite the synthesized file
-        [ "$PLAYBACK_RESYNTH" != "no" ] && PLAYBACK_RESYNTH="no" || PLAYBACK_RESYNTH="yes"
+    x) # assemble and export converted PBX recordings
+        [ "$EXPORT_AUDIO" != "yes" ] && EXPORT_AUDIO="yes" || EXPORT_AUDIO="no"
+	PLAYBACK="no"
 	;;
-    x) # Assemble and save PBX recordings, otherwise playback the generated files using the soundcard speakers
+    X) # exported file format
+        xEXPORT_AUDIO_FORMATS="${OPTARG}"
+	if [ -z "$(echo "$EXPORT_AUDIO_FORMATS" | grep -w "$xEXPORT_AUDIO_FORMATS")" ]; then
+          echo "Invalid audio format specified: $xEXPORT_AUDIO_FORMATS"
+	  echo "Supported audio formats: \"$EXPORT_AUDIO_FORMATS\""
+          exit 1
+	 else
+	  EXPORT_AUDIO_FORMATS="$xEXPORT_AUDIO_FORMATS"
+	fi
+	;;
+    w) # overWrite the synthesized file
+        [ "$OVERWRITE" != "no" ] && OVERWRITE="no" || OVERWRITE="yes"
+	;;
+    b) # playback the generated files using the soundcard speakers
         [ "$PLAYBACK" != "yes" ] && PLAYBACK="yes" || PLAYBACK="no"
+	;;
+    B) # Playback in background detaching the command
+        [ "$PLAYBACK_BACKGROUND" != "yes" ] && PLAYBACK_BACKGROUND="yes" || PLAYBACK_BACKGROUND="no"
 	;;
     d) # hardware playback device
         PLAYBACK_DEVICE="${OPTARG}"
@@ -1705,9 +1744,6 @@ while getopts "t:i:o:m:S:p:P:F:M:T:e:d:k:K:v:W:slrLwxDbChHEV" option ; do
 	;;
     K) # playback command extra options
         PLAYBACK_COMMAND_OPTS="${OPTARG}"
-	;;
-    b) # Playback in background detaching the command
-        [ "$PLAYBACK_BACKGROUND" != "yes" ] && PLAYBACK_BACKGROUND="yes" || PLAYBACK_BACKGROUND="no"
 	;;
     C) # write/overwrite user config file
         if [ -e "$IZSYNTH_CONFIG_FILE" ]; then
@@ -1801,6 +1837,13 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 
 # ChangeLog:
 # ============================================================================
+# 4.7 - 20170411
+# - renamed command line option: -x to -b
+# - renamed command line option: -b to -B
+# - renamed PLAYBACK_OVERWRITE variable to OVERWRITE
+# - new config file variable: EXPORT_AUDIO and new option switch: -x (assemble and save PBX recordings)
+# - new config file variable: EXPORT_AUDIO_FORMATS and new option switch: -X
+
 # 4.6 - 20161228
 # - some sox command optimizations
 # - add sox "lowpass 4000" when converting to pbx format for better results
