@@ -4,3 +4,4 @@ TESTS
 .svn
 .*.swp
 engines/oddcast.conf
+.DS_Store

@@ -1603,7 +1603,7 @@ Soundcard audio playback options:
   -B                         Playback in background detaching the $NAME command (current: $PLAYBACK_BACKGROUND) (only if PLAYBACK=yes)
   -k                         Playback command (current: $PLAYBACK_COMMAND)
   -K                         Playback command options (current: $([ ! -z "$PLAYBACK_COMMAND_OPTS" ] && echo -e -n "$PLAYBACK_COMMAND_OPTS" || echo -e -n "none"))
-  -d                         Playback output device (current: $PLAYBACK_DEVICE)
+  -d                         Playback output device (current: $([ -z "$PLAYBACK_DEVICE" ] && echo -e -n "default"))
   -D                         List available playback output devices
   -W     <volume>            Change the playback soundcard output volume (current: $([ ! -z "$PLAYBACK_VOLUME" ] && echo -e -n "$PLAYBACK_VOLUME" || echo -e -n "none) (use a number from 0 to 100"))
   -r                         Remove synthesized file after playback
