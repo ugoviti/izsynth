@@ -1048,7 +1048,7 @@ convert_file() {
   if [ "$IN_SR" != 44100 ]
     then
       # change the destination file because become 44100hz frequency
-      OUT="$(print_path $OUT)/$(print_name $OUT)-44khz.wav"
+      OUT="$(print_path $OUT)/$(print_name $OUT).normalized.44khz.wav"
       # convert to wav 44100 hz the wav file
       sox $SOX_OPTS "$IN" -r 44100 "$OUT"
       local RETVAL=$?
@@ -1476,15 +1476,18 @@ main() {
     rulem " [$ID/${#IN_FILE[@]}] - $NAME Name:[$(print_name $IN)] " = 80
 
     # define the output file name
-    if   [[ "$PLAYBACK" = "yes" ]]; then
+    [ "$REMIX" = "yes" ] && local OUT="$OUT_DIR/$(print_name $IN).44khz.wav" || local OUT="$OUT_DIR/$(print_name $IN).$TTS_EXT"
+
+    # deprecated
+    #if   [[ "$PLAYBACK" = "yes" ]]; then
       # to speed up the playback process don't convert and use the wav version, directly use the tts_engine encoding instead
-      [ "$REMIX" = "yes" ] && local OUT="$OUT_DIR/$(print_name $IN).44khz.wav" || local OUT="$OUT_DIR/$(print_name $IN).$TTS_EXT"
-    elif [[ "$EXPORT_AUDIO" = "yes" && "$OVERWRITE" = "no" ]]; then
-      # to speed up the playback process don't convert and use the wav version, directly use the tts_engine encoding instead
-      [ "$REMIX" = "yes" ] && local OUT="$OUT_DIR/$(print_name $IN).44khz.wav" || local OUT="$OUT_DIR/$(print_name $IN).$TTS_EXT"
-     else
-      local OUT="$TMP_DIR/$(print_name $IN).44khz.wav"
-    fi
+    #  [ "$REMIX" = "yes" ] && local OUT="$OUT_DIR/$(print_name $IN).44khz.wav" || local OUT="$OUT_DIR/$(print_name $IN).$TTS_EXT"
+    #elif [[ "$EXPORT_AUDIO" = "yes" && "$OVERWRITE" = "no" ]]; then
+    #  # to speed up the playback process don't convert and use the wav version, directly use the tts_engine encoding instead
+    #  [ "$REMIX" = "yes" ] && local OUT="$OUT_DIR/$(print_name $IN).44khz.wav" || local OUT="$OUT_DIR/$(print_name $IN).$TTS_EXT"
+    # else
+    #  local OUT="$TMP_DIR/$(print_name $IN).44khz.wav"
+    #fi
 
     if [[ -e "$OUT" && "$OVERWRITE" = "no" ]]; then
         # resynth the audio file only if the previous saved file was corrupted or with wrong format
