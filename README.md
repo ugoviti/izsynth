@@ -47,8 +47,7 @@ Download latest stable version of izSynth package from http://www.initzero.it/pr
 
 **Development Release**
 
-`cd /usr/local/bin`
-`wget https://raw.githubusercontent.com/ugoviti/izsynth/master/izsynth -O izsynth && chmod 755 izsynth`
+`cd /usr/local/bin && wget https://raw.githubusercontent.com/ugoviti/izsynth/master/izsynth -O izsynth && chmod 755 izsynth`
 
 ### Update izSynth
 
@@ -75,7 +74,7 @@ Make a quick test with the following command:
 
 I suggest to create an external config file to avoid changes to your configurations when you update izsynth script.
 
-Create the following config file: `$HOME/.config/izsynth/izsynth.conf` using the command:
+Create/Update the izsynth config file: `$HOME/.config/izsynth/izsynth.conf`
 
 `$ izsynth -C`
 
@@ -83,7 +82,7 @@ and edit it using your prefered text editor.
 
 **NB.** if the `$HOME/.config/izsynth` directory doesn't exist, izsynth will create it on the first run
 
-**REMEMBER: the command line options win always against the config file**
+**REMEMBER: the command line options have priority against the config file**
 
 Now let's try the various izsynth options available.
 izsynth allow for example to put a background music in every synthesized file, or you can mix various languages and engines in one (MEGAMIX feature)... use the command `izsynth -E` to discover.
