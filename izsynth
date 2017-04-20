@@ -1,6 +1,7 @@
 #!/bin/bash
 # izSynth - TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems
 # Home Page: http://www.initzero.it/products/opensource/izsynth
+# GitHub: https://github.com/ugoviti/izsynth
 # Written by: Ugo Viti <ugo.viti@initzero.it>
 #
 # izSynth is a bash script running under Linux, written to automate the synthesis of voices used into izPBX System or for realtime TTS (Text To Speech) used into Home Automation solutions.
@@ -13,7 +14,7 @@
 # script variables
 NAME="izsynth"
 DESCRIPTION="TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems"
-VERSION="4.8"
+VERSION="4.7"
 VERSION_DATE="20170420"
 
 #####################################
@@ -1848,14 +1849,11 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 
 # ChangeLog:
 # ============================================================================
-# 4.8 - 20170420
-# - renamed OVERWRITE variable to OVERWRITE_OUTPUT
-# - renamed PLAYBACK_REMOVE variable to REMOVE_OUTPUT
-
-# 4.7 - 20170411
+# 4.7 - 20170420
 # - renamed command line option: -x to -b
 # - renamed command line option: -b to -B
-# - renamed PLAYBACK_OVERWRITE variable to OVERWRITE
+# - renamed PLAYBACK_OVERWRITE variable to OVERWRITE_OUTPUT
+# - renamed PLAYBACK_REMOVE variable to REMOVE_OUTPUT
 # - new config file variable: EXPORT_AUDIO and new option switch: -x (assemble and save PBX recordings)
 # - new config file variable: EXPORT_AUDIO_FORMATS and new option switch: -X
 
