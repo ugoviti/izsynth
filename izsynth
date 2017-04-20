@@ -752,6 +752,9 @@ TTS_VOICE=\"$TTS_VOICE\"
 # resynth the file if it already exist
 OVERWRITE_OUTPUT=\"$OVERWRITE_OUTPUT\"
 
+# remove synthesized file after playback
+REMOVE_OUTPUT=\"$REMOVE_OUTPUT\"
+
 # assemble and export converted PBX recordings
 EXPORT_AUDIO=\"$EXPORT_AUDIO\"
 
@@ -763,9 +766,6 @@ EXPORT_AUDIO_FORMAT_SUBDIR=\"$EXPORT_AUDIO_FORMAT_SUBDIR\"
 
 # realtime audio playback variables
 PLAYBACK=\"$PLAYBACK\"
- 
-# remove synthesized file after playback
-REMOVE_OUTPUT=\"$REMOVE_OUTPUT\"
  
 # play the file in background, otherwise foreground
 PLAYBACK_BACKGROUND=\"$PLAYBACK_BACKGROUND\"
