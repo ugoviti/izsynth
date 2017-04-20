@@ -111,7 +111,7 @@ If you found the correct audio volume, I suggest to modify the config file, so y
 
 **Use an external device (like bluetooth speaker) as playback output:**
 
-First configure the bluetooth stack and connect you izsynth box to the bluetooth speaker.
+First configure the bluetooth stack and connect your izsynth box to the bluetooth speaker.
 
 Now test the output from command line:
 
