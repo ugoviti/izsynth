@@ -28,10 +28,10 @@ TTS_ENGINE="naturalreaders"
 TTS_VOICE="Peter"
 
 # resynth the file if it already exist
-OVERWRITE_OUTPUT="no"
+OUTPUT_OVERWRITE="no"
 
 # remove synthesized file after playback
-REMOVE_OUTPUT="no"
+OUTPUT_REMOVE="no"
 
 # assemble and export converted PBX recordings
 EXPORT_AUDIO="no"
@@ -103,8 +103,8 @@ IZSYNTH_CONFIG_FILE="$IZSYNTH_CONFIG_DIR/$NAME.conf"
 [ -e "$IZSYNTH_CONFIG_FILE" ] && . "$IZSYNTH_CONFIG_FILE"
 
 ## compatibility and deprecated variabiles
-[ ! -z "$PLAYBACK_OVERWRITE" ] && OVERWRITE_OUTPUT="$PLAYBACK_OVERWRITE"
-[ ! -z "$PLAYBACK_REMOVE" ] && REMOVE_OUTPUT="$PLAYBACK_REMOVE"
+[ ! -z "$PLAYBACK_OVERWRITE" ] && OUTPUT_OVERWRITE="$PLAYBACK_OVERWRITE"
+[ ! -z "$PLAYBACK_REMOVE" ] && OUTPUT_REMOVE="$PLAYBACK_REMOVE"
 
 
 ###########################################################################################
@@ -750,10 +750,10 @@ TTS_ENGINE=\"$TTS_ENGINE\"
 TTS_VOICE=\"$TTS_VOICE\"
  
 # resynth the file if it already exist
-OVERWRITE_OUTPUT=\"$OVERWRITE_OUTPUT\"
+OUTPUT_OVERWRITE=\"$OUTPUT_OVERWRITE\"
 
 # remove synthesized file after playback
-REMOVE_OUTPUT=\"$REMOVE_OUTPUT\"
+OUTPUT_REMOVE=\"$OUTPUT_REMOVE\"
 
 # assemble and export converted PBX recordings
 EXPORT_AUDIO=\"$EXPORT_AUDIO\"
@@ -996,7 +996,7 @@ playback_file () {
   playback_engine_$PLAYBACK_COMMAND env
 
   # if we must remove the synthesized file, of course we can't remove it if PLAYBACK_BACKGROUND=yes
-  [ "$REMOVE_OUTPUT" = "yes" ] && PLAYBACK_BACKGROUND="no"
+  [ "$OUTPUT_REMOVE" = "yes" ] && PLAYBACK_BACKGROUND="no"
 
   echo "Playing      - input:[$IN] command:[$PLAYBACK_COMMAND] options:[$PLAYBACK_COMMAND_OPTS]"
 
@@ -1101,7 +1101,7 @@ export_file() {
                         ;;
       esac
 
-      if [[ ! -e "$OUT" || "$OVERWRITE_OUTPUT" = "yes" ]]; then
+      if [[ ! -e "$OUT" || "$OUTPUT_OVERWRITE" = "yes" ]]; then
         # convert to pbx formats
         sox -V1 $SOX_OPTS "$IN" $SOX_OPTS_FORMAT "$OUT" lowpass 4000
 
@@ -1345,7 +1345,7 @@ check_env() {
   tts_engine_${TTS_ENGINE[$ID]} env >/dev/null 2>&1
 
   # set default variables
-  [ -z "$OVERWRITE_OUTPUT" ] && OVERWRITE_OUTPUT="yes"
+  [ -z "$OUTPUT_OVERWRITE" ] && OUTPUT_OVERWRITE="yes"
 
   # check if no args are given and make some sanity checks
   [[ -z "${TTS_STRING}" && -z "${IN_FILE}" ]] && echo "ERROR: no text STRING/FILE/DIRECTORY specified, use '-t' or '-i' option - abort." >&2 && exit 1
@@ -1480,14 +1480,14 @@ main() {
     #if   [[ "$PLAYBACK" = "yes" ]]; then
       # to speed up the playback process don't convert and use the wav version, directly use the tts_engine encoding instead
     #  [ "$REMIX" = "yes" ] && local OUT="$OUT_DIR/$(print_name $IN).44khz.wav" || local OUT="$OUT_DIR/$(print_name $IN).$TTS_EXT"
-    #elif [[ "$EXPORT_AUDIO" = "yes" && "$OVERWRITE_OUTPUT" = "no" ]]; then
+    #elif [[ "$EXPORT_AUDIO" = "yes" && "$OUTPUT_OVERWRITE" = "no" ]]; then
     #  # to speed up the playback process don't convert and use the wav version, directly use the tts_engine encoding instead
     #  [ "$REMIX" = "yes" ] && local OUT="$OUT_DIR/$(print_name $IN).44khz.wav" || local OUT="$OUT_DIR/$(print_name $IN).$TTS_EXT"
     # else
     #  local OUT="$TMP_DIR/$(print_name $IN).44khz.wav"
     #fi
 
-    if [[ -e "$OUT" && "$OVERWRITE_OUTPUT" = "no" ]]; then
+    if [[ -e "$OUT" && "$OUTPUT_OVERWRITE" = "no" ]]; then
         # resynth the audio file only if the previous saved file was corrupted or with wrong format
         if [ "$(show_mime_brief "$OUT")" != "audio" ]; then
         	echo "File exist   - input:[$OUT] status:[corrupted] action:[resinthesizing]"
@@ -1507,7 +1507,7 @@ main() {
     fi
 
     # if required, remove the synthesized file
-    [ "$REMOVE_OUTPUT" = "yes" ] && echo "Removing     - output:[$OUT]" && rm -f "$OUT"
+    [ "$OUTPUT_REMOVE" = "yes" ] && echo "Removing     - output:[$OUT]" && rm -f "$OUT"
 
     rulem " [$ID/${#IN_FILE[@]}] " - 80
    done
@@ -1515,7 +1515,7 @@ main() {
    # the megamix file name is always taken from the first input name
    [ "$PLAYBACK" = "yes" ] && local OUT_MEGAMIX="$OUT_DIR/$(print_name ${IN_FILE[1]}).44khz.wav" || local OUT_MEGAMIX="$TMP_DIR/$(print_name ${IN_FILE[1]}).44khz.wav"
 
-   if [[ ! -e "$OUT_MEGAMIX" || "$OVERWRITE_OUTPUT" = "yes" ]]; then
+   if [[ ! -e "$OUT_MEGAMIX" || "$OUTPUT_OVERWRITE" = "yes" ]]; then
         # remix all given files in one big file
         ID=0 ; for IN in "${IN_FILE[@]}"; do
          let ID+=1
@@ -1536,7 +1536,7 @@ main() {
    fi
 
     # if required, remove the synthesized file
-    [ "$REMOVE_OUTPUT" = "yes" ] && echo "Removing     - output:[$OUT_MEGAMIX]" && rm -f "$OUT_MEGAMIX"
+    [ "$OUTPUT_REMOVE" = "yes" ] && echo "Removing     - output:[$OUT_MEGAMIX]" && rm -f "$OUT_MEGAMIX"
 
    rulem " [$ID/${#IN_FILE[@]}] " - 80
  fi
@@ -1614,12 +1614,12 @@ Soundcard audio playback options:
   -d                         Playback output device (current: $([ -z "$PLAYBACK_DEVICE" ] && echo -e -n "default"))
   -D                         List available playback output devices
   -W     <volume>            Change the playback soundcard output volume (current: $([ ! -z "$PLAYBACK_VOLUME" ] && echo -e -n "$PLAYBACK_VOLUME" || echo -e -n "none) (use a number from 0 to 100"))
-  -r                         Remove synthesized file after playback
+  -r                         Remove synthesized file after playback (current: $OUTPUT_REMOVE)
 
 Output file options:
-  -x                         Assemble and export converted PBX recordings (current: $EXPORT_AUDIO) (yes = this will assume PLAYBACK=no and OVERWRITE_OUTPUT=yes)
+  -x                         Assemble and export converted PBX recordings (current: $EXPORT_AUDIO) (yes = this will assume PLAYBACK=no and OUTPUT_OVERWRITE=yes)
   -X                         Export recorings using the following audio formats (current: \"$EXPORT_AUDIO_FORMATS\") (valid only if EXPORT_AUDIO=yes))
-  -w                         Overwrite the synthesized file (current: $OVERWRITE_OUTPUT) (no = keep the generated file for later usage)
+  -w                         Overwrite the synthesized file (current: $OUTPUT_OVERWRITE) (no = keep the generated file for later usage)
   -s                         Split destination audio files into audio formats sub directories (current: $EXPORT_AUDIO_FORMAT_SUBDIR) (valid only if EXPORT_AUDIO=yes)
 
 Misc options:
@@ -1706,7 +1706,7 @@ while getopts "t:i:o:m:S:p:P:F:M:T:e:v:d:k:K:W:X:slLrxwbBDChHEV" option ; do
         PLAYBACK_VOLUME="${OPTARG}"
 	;;
     r) # remove synthesized file after playback
-	REMOVE_OUTPUT="yes"
+	OUTPUT_REMOVE="yes"
 	;;
     x) # assemble and export converted PBX recordings
         [ "$EXPORT_AUDIO" != "yes" ] && EXPORT_AUDIO="yes" || EXPORT_AUDIO="no"
@@ -1723,7 +1723,7 @@ while getopts "t:i:o:m:S:p:P:F:M:T:e:v:d:k:K:W:X:slLrxwbBDChHEV" option ; do
 	fi
 	;;
     w) # overWrite the synthesized file
-        [ "$OVERWRITE_OUTPUT" != "no" ] && OVERWRITE_OUTPUT="no" || OVERWRITE_OUTPUT="yes"
+        [ "$OUTPUT_OVERWRITE" != "no" ] && OUTPUT_OVERWRITE="no" || OUTPUT_OVERWRITE="yes"
 	;;
     b) # playback the generated files using the soundcard speakers
         [ "$PLAYBACK" != "yes" ] && PLAYBACK="yes" || PLAYBACK="no"
@@ -1852,8 +1852,8 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 # 4.7 - 20170420
 # - renamed command line option: -x to -b
 # - renamed command line option: -b to -B
-# - renamed PLAYBACK_OVERWRITE variable to OVERWRITE_OUTPUT
-# - renamed PLAYBACK_REMOVE variable to REMOVE_OUTPUT
+# - renamed PLAYBACK_OVERWRITE variable to OUTPUT_OVERWRITE
+# - renamed PLAYBACK_REMOVE variable to OUTPUT_REMOVE
 # - new config file variable: EXPORT_AUDIO and new option switch: -x (assemble and save PBX recordings)
 # - new config file variable: EXPORT_AUDIO_FORMATS and new option switch: -X
 
