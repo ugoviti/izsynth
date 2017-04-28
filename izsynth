@@ -15,7 +15,7 @@
 NAME="izsynth"
 DESCRIPTION="TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems"
 VERSION="4.7"
-VERSION_DATE="20170420"
+VERSION_DATE="20170428"
 
 #####################################
 ## default suggested user variables to change 
@@ -1261,7 +1261,7 @@ print_fullname() {
 }
 
 print_name() {
-  print_fullname $(echo ${@%%.*})
+  print_fullname $(echo ${@%.*})
 }
 
 print_ext() {
@@ -1591,7 +1591,7 @@ Input/Output file management:
   -i     <file or directory> Input txt/wav/mp3 file or directory to synthesize/convert (this disable '-t' option)
   -o     <directory>         Output directory to save synthesized and assembled files (current: $OUT_DIR)
 
-Text To Speech management:
+TextToSpeech management:
   -e     <engine>            TTS voice engine (current: $TTS_ENGINE)
   -v     <voice>             TTS voice language (current: $TTS_VOICE)
   -T     <volume>            TTS volume (current: $([ ! -z "$TTS_VOLUME" ] && echo -e -n "$TTS_VOLUME" || echo -e -n "none) (use a number from 0.01 to 1"))
@@ -1614,12 +1614,12 @@ Soundcard audio playback options:
   -d                         Playback output device (current: $([ -z "$PLAYBACK_DEVICE" ] && echo -e -n "default"))
   -D                         List available playback output devices
   -W     <volume>            Change the playback soundcard output volume (current: $([ ! -z "$PLAYBACK_VOLUME" ] && echo -e -n "$PLAYBACK_VOLUME" || echo -e -n "none) (use a number from 0 to 100"))
-  -r                         Remove synthesized file after playback (current: $OUTPUT_REMOVE)
+  -r                         Remove synthesized file after playback (current: $OUTPUT_REMOVE) (no = keep the generated high quality audio file for later usage)
 
 Output file options:
-  -x                         Assemble and export converted PBX recordings (current: $EXPORT_AUDIO) (yes = this will assume PLAYBACK=no and OUTPUT_OVERWRITE=yes)
-  -X                         Export recorings using the following audio formats (current: \"$EXPORT_AUDIO_FORMATS\") (valid only if EXPORT_AUDIO=yes))
-  -w                         Overwrite the synthesized file (current: $OUTPUT_OVERWRITE) (no = keep the generated file for later usage)
+  -x                         Export the generated audio file into PBX formats (current: $EXPORT_AUDIO) (yes = this will assume PLAYBACK=no and OUTPUT_OVERWRITE=yes)
+  -X                         Export using the following audio formats (current: \"$EXPORT_AUDIO_FORMATS\") (valid only if EXPORT_AUDIO=yes))
+  -w                         Overwrite the synthesized file (current: $OUTPUT_OVERWRITE)
   -s                         Split destination audio files into audio formats sub directories (current: $EXPORT_AUDIO_FORMAT_SUBDIR) (valid only if EXPORT_AUDIO=yes)
 
 Misc options:
@@ -1849,13 +1849,14 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 
 # ChangeLog:
 # ============================================================================
-# 4.7 - 20170420
+# 4.7 - 20170428
 # - renamed command line option: -x to -b
 # - renamed command line option: -b to -B
 # - renamed PLAYBACK_OVERWRITE variable to OUTPUT_OVERWRITE
 # - renamed PLAYBACK_REMOVE variable to OUTPUT_REMOVE
 # - new config file variable: EXPORT_AUDIO and new option switch: -x (assemble and save PBX recordings)
 # - new config file variable: EXPORT_AUDIO_FORMATS and new option switch: -X
+# - fix print_name function
 
 # 4.6 - 20161228
 # - some sox command optimizations
