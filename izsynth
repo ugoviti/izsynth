@@ -1261,7 +1261,7 @@ print_fullname() {
 }
 
 print_name() {
-  print_fullname $(echo ${@%.*})
+  print_fullname $(echo ${@%.*}) | sed 's/\..*$//g'
 }
 
 print_ext() {
