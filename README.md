@@ -1,6 +1,7 @@
 izSynth
 ==================
-TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems
+TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems <br/>
+Author: Ugo Viti <ugo.viti@initzero.it>
 
 ## Description
 izSynth is a bash script running under Linux, written to automate the synthesis of voices used into izPBX System or for realtime TTS (Text To Speech) used into Home Automation solutions.
