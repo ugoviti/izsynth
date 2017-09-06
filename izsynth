@@ -14,8 +14,8 @@
 # script variables
 NAME="izsynth"
 DESCRIPTION="TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems"
-VERSION="4.7"
-VERSION_DATE="20170428"
+VERSION="4.8"
+VERSION_DATE="20170907"
 
 #####################################
 ## default suggested user variables to change 
@@ -1351,7 +1351,8 @@ check_env() {
   [[ -z "${TTS_STRING}" && -z "${IN_FILE}" ]] && echo "ERROR: no text STRING/FILE/DIRECTORY specified, use '-t' or '-i' option - abort." >&2 && exit 1
 
   # make an input file where paste the given text string
-  [ -n "$TTS_STRING" ] &&  IN_FILE=("$TMP_DIR/$(echo "$TTS_STRING" | sed -e 's/[^A-Za-z0-9_-]/_/g' | cut -c-64).txt") && echo "$TTS_STRING" > "$IN_FILE"
+  # [ -n "$TTS_STRING" ] &&  IN_FILE=("$TMP_DIR/$(echo "$TTS_STRING" | sed -e 's/[^A-Za-z0-9_-]/_/g' | cut -c-64).txt") && echo "$TTS_STRING" > "$IN_FILE"
+  [ -n "$TTS_STRING" ] &&  IN_FILE=("$TMP_DIR/$(echo "$TTS_STRING" | sed -e 's/[^A-Za-z0-9_-]/_/g' | cut -c-32)-$(echo "$TTS_STRING" | cksum | cut -d" " -f1).txt") && echo "$TTS_STRING" > "$IN_FILE"
 
   #if is_array IN_FILE ; then echo IN_FILE è un array; fi
   #[[ -z "${TTS_STRING}" && ! -f "${IN_FILE}" && ! -d "${IN_FILE}" ]] && echo "ERROR: ${IN_FILE}: invalid input file/directory - abort." >&2 && exit 1
@@ -1849,6 +1850,9 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 
 # ChangeLog:
 # ============================================================================
+# 4.8 - 20170907
+# - Implemented cksum hash file names when creating tts files from cli (thanks to Jean-Marc Leglise for the idea). So every txt/tts file will always have an unique file name based on contents.
+
 # 4.7 - 20170428
 # - renamed command line option: -x to -b
 # - renamed command line option: -b to -B
