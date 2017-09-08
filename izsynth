@@ -434,7 +434,7 @@ tts_engine_naturalreaders() {
 
   case $ACTION in
 	description)
-		echo "2015-12-19 Remote NaturalReader YES Custom http://www.naturalreaders.com"
+		echo "2017-09-08 Remote NaturalReader YES Custom http://www.naturalreaders.com"
 		;;
 	help)
 		echo "No help available for $TTS_ENGINE"
@@ -449,49 +449,74 @@ tts_engine_naturalreaders() {
 		echo "curl"
 		;;
 	voices)
-		# extracted from www.naturalreaders.com on 2015-12-19
-		echo "1:  US Mike
-11: US Crystal
-14: US Ray
-17: US Lauren
-13: US Rich
-16: US Julia
-18: US Mel
-15: US Claire
-33: US Ryan
-26: US Healter
-29: US Laura
-2:  UK Charles
-3:  UK Audrey
-31: UK Peter
-32: UK Rachel
-25: UK Graham
-30: UK Lucy
-4:  UK Anjali
-7:  French Alain
-8:  French Juliette
-22: French Bruno
-21: French Alice
-5:  German Reiner
-6:  German Klara
-20: Spanish Rosa
-19: Spanish Alberto
-10: Italian Giovanni
-12: Italian Francesca
-34: Arabic Salma
-40  Arabic Mehdi"
+		# extracted from www.naturalreaders.com on 2017-09-08
+		# oneliner command:
+		# curl -s https://www.naturalreaders.com/online/main.bc6d1a3c4945c5af706b.bundle.js | uglifyjs --beautify | grep ", this.premiumVoices.push(n), " | sed 's/this.premiumVoices.push(n), /'\\\n'/g' | sed -e 's/^[ \t]*//' | sed '/^$/d' | awk -F'[()]' '{print $2}' | sed 's/"//g' | sed 's/ //g' | sort | uniq | awk -F, '{print $2" "$1" "$3" "$4}' | sort | column -c1 -t
+		echo "de-DE  Klara     att    6
+de-DE  Klaus     aca    28
+de-DE  Petra     apple  11
+de-DE  Reiner    att    5
+de-DE  Sarah     aca    35
+de-DE  Yannick   apple  12
+en-GB  Audrey    att    3
+en-GB  Charles   att    2
+en-GB  Daniel    apple  3
+en-GB  Graham    aca    25
+en-GB  Peter     aca    31
+en-GB  Rachel    aca    32
+en-GB  Serena    apple  4
+en-US  Ava       apple  1
+en-US  Mike      att    1
+en-US  Rod       aca    41
+en-US  Ryan      aca    33
+en-US  Samantha  apple  2
+en-US  Sharon    aca    42
+en-US  Tom       apple  0
+en-US  Tracy     aca    37
+es-CA  Jorge     apple  8
+es-ES  Alberto   att    19
+es-ES  Monica    apple  7
+es-ES  Rosa      att    20
+es-MX  Juan      apple  5
+es-MX  Paulina   apple  6
+fr-CA  Chantal   apple  10
+fr-CA  Louice    aca    43
+fr-CA  Nicolas   apple  9
+fr-FR  Alain     att    7
+fr-FR  Alice     aca    21
+fr-FR  Bruno     aca    22
+fr-FR  Juliette  att    8
+it-IT  Chiara    aca    23
+it-IT  Federica  apple  14
+it-IT  Luca      apple  13
+it-IT  Vittorio  aca    36
+nl-NL  Claire    apple  21
+pt-BR  Felip     apple  15
+pt-BR  Luciana   apple  16
+pt-PT  Catarina  apple  17
+pt-PT  Celia     aca    44
+pt-PT  Joana     apple  18
+sv-SE  Alva      apple  19
+sv-SE  Emma      aca    45
+sv-SE  Erik      aca    46
+sv-SE  Oskar     apple  20"
 		;;
         voice)
-		eval ${FUNCNAME} voices 2>&1 | grep -F -w -- "$VOICE" | head -n1 | tr -d [:cntrl:] | awk -F: '{print $1}'
+		eval ${FUNCNAME} voices 2>&1 | grep -i -F -w -- "$VOICE" | head -n1 | tr -d [:cntrl:] | awk '{print $4}'
                 ;;
 	synthesize)
-		#local TTS_STRING_CONTENT="$(cat "$IN" | tr ' ' '+' | tr '\n' '+')"
 		local TTS_STRING_CONTENT="$(urlencode "$(cat "$IN" | parse_tts_string)")"
-		local TTS_SPEED=0
+		local TTS_SPEED=1
 		local TTS_VOICE="$(eval ${FUNCNAME} voice $VOICE)"
-		local REQUESTTOKEN="$(curl -s -G "http://api.naturalreaders.com/v2/auth/requesttoken?appid=pelc790w2bx&appsecret=2ma3jkhafcyscswg8wgk00w0kwsog4s" | awk -F":" '{print $3}' | tr -d [:punct:])"
+		local TTS_TYPE="$(eval ${FUNCNAME} voices 2>&1 | grep -i -F -w -- "$VOICE" | head -n1 | tr -d [:cntrl:] | awk '{print $3}')"
+		case $TTS_TYPE in
+			aca|att) curl -s -G "http://api.naturalreaders.com/v0/tts/?t=$TTS_STRING_CONTENT&r=$TTS_VOICE&s=$TTS_SPEED" -o "$OUT" ;;
+			apple)   curl -s -G "http://api.naturalreaders.com/v4/tts/macspeak?apikey=b98x9xlfs54ws4k0wc0o8g4gwc0w8ss&t=$TTS_STRING_CONTENT&r=$TTS_VOICE&s=$TTS_SPEED" -o "$OUT" ;;
+		esac
 
-		curl -s -G "http://api.naturalreaders.com/v2/tts/?t=$TTS_STRING_CONTENT&r=$TTS_VOICE&s=$TTS_SPEED&requesttoken=$REQUESTTOKEN" -o "$OUT"
+		# deprecated old method
+		#local REQUESTTOKEN="$(curl -s -G "http://api.naturalreaders.com/v2/auth/requesttoken?appid=pelc790w2bx&appsecret=2ma3jkhafcyscswg8wgk00w0kwsog4s" | awk -F":" '{print $3}' | tr -d [:punct:])"
+		#curl -s -G "http://api.naturalreaders.com/v2/tts/?t=$TTS_STRING_CONTENT&r=$TTS_VOICE&s=$TTS_SPEED&requesttoken=$REQUESTTOKEN" -o "$OUT"
 		;;
 	*)
 		echo "${FUNCNAME}: wrong method called - abort"
