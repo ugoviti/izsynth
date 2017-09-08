@@ -511,7 +511,7 @@ sv-SE  Oskar     apple  20"
 		local TTS_TYPE="$(eval ${FUNCNAME} voices 2>&1 | grep -i -F -w -- "$VOICE" | head -n1 | tr -d [:cntrl:] | awk '{print $3}')"
 		case $TTS_TYPE in
 			aca|att) curl -s -G "http://api.naturalreaders.com/v0/tts/?t=$TTS_STRING_CONTENT&r=$TTS_VOICE&s=$TTS_SPEED" -o "$OUT" ;;
-			apple)   curl -s -G "http://api.naturalreaders.com/v4/tts/macspeak?apikey=b98x9xlfs54ws4k0wc0o8g4gwc0w8ss&t=$TTS_STRING_CONTENT&r=$TTS_VOICE&s=$TTS_SPEED" -o "$OUT" ;;
+			apple)   curl -s -G "http://api.naturalreaders.com/v4/tts/macspeak?apikey=b98x9xlfs54ws4k0wc0o8g4gwc0w8ss&src=pw&r=$TTS_VOICE&s=$TTS_SPEED&t=$TTS_STRING_CONTENT" -o "$OUT" ;;
 		esac
 
 		# deprecated old method
@@ -922,7 +922,7 @@ urlencode() {
 
 # remove all new lines, double white spaces and ending spaces to avoid problems when encoding url
 parse_tts_string() {
-  tr '\n' ' ' | sed 's/  \+/ /g' | sed 's/^[ \t]*//;s/[ \t]*$//'
+  tr '\n' ' ' | sed 's/  \+/ /g' | sed 's/^[ \t]*//;s/[ \t]*$//' | sed 's/ *\([;:,.]\) */\1 /g'
 }
 
 # because some engines allow only limited string length, we must count how many chars we have and pass only the max allowed to the engine
