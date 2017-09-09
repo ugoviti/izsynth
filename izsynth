@@ -15,7 +15,7 @@
 NAME="izsynth"
 DESCRIPTION="TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems"
 VERSION="4.8"
-VERSION_DATE="20170907"
+VERSION_DATE="20170909"
 
 #####################################
 ## default suggested user variables to change 
@@ -127,10 +127,13 @@ tts_engine_ispeech() {
 
   case $ACTION in
         description)
-                echo "2016-05-03 Remote iSpeech NO Custom http://www.ispeech.org"
+                echo "2017-09-09 Remote iSpeech YES Custom http://www.ispeech.org"
                 ;;
         help)
-                echo "this engine is limited to 160 chars max"
+                echo "Get the iSpeech API KEY from: https://www.ispeech.org/developers"
+                echo "and put the following variable info '$IZSYNTH_CONFIG_FILE' config file:"
+                echo
+                echo "TTS_ENGINE_ISPEECH_APIKEY=\"developerdemokeydeveloperdemokey\""
                 ;;
         env)
                 # default output file format
@@ -145,60 +148,65 @@ tts_engine_ispeech() {
                 echo "curl"
                 ;;
         voices)
-                # extract languages and voices list and make the output using the following command:
-		#curl -s http://www.ispeech.org/html/tts-demo.php | grep "<li class=\"voices\" id=\"" | awk -F "['']" '{print $2" "$3}' | awk -F "[><]" '{print $1" "$4}' | sed 's/&nbsp;//g' | sed 's/);"//g' | column -c1 -t
-		echo "Voice                Country     Language    Gender"
-		echo "-------------------- ----------- ----------- ------"
-		echo "usenglishfemale      US          English     Female
-usenglishmale        US          English     Male
-ukenglishfemale      UK          English     Female
-ukenglishmale        UK          English     Male
-auenglishfemale      Australian  English     Female
-usspanishfemale      US          Spanish     Female
-usspanishmale        US          Spanish     Male
-chchinesefemale      China       Chinese     Female
-hkchinesefemale      HongKong    Catonese    Female
-twchinesefemale      Taiwan      Chinese     Female
-jpjapanesefemale     Japan       Japanese    Female
-krkoreanfemale       Korea       Korean      Female
-caenglishfemale      Canadian    English     Female
-huhungarianfemale    Hungary     Hungarian   Female
-brportuguesefemale   Brazilian   Portuguese  Female
-eurportuguesefemale  European    Portuguese  Female
-eurportuguesemale    European    Portuguese  Male
-eurspanishfemale     European    Spanish     Female
-eurspanishmale       European    Spanish     Male
-eurcatalanfemale     European    Catalan     Female
-eurczechfemale       European    Czech       Female
-eurdanishfemale      European    Danish      Female
-eurfinnishfemale     European    Finnish     Female
-eurfrenchfemale      European    French      Female
-eurfrenchmale        European    French      Male
-eurnorwegianfemale   European    Norweigian  Female
-eurdutchfemale       European    Dutch       Female
-eurpolishfemale      European    Polish      Female
-euritalianfemale     European    Italian     Female
-euritalianmale       European    Italian     Male
-eurturkishfemale     European    Turkish     Female
-eurturkishmale       European    Turkish     Male
-eurgreekfemale       European    Greek       Female
-eurgermanfemale      European    German      Female
-eurgermanmale        European    German      Male
-rurussianfemale      Russia      Russian     Female
-rurussianmale        Russia      Russian     Male
-swswedishfemale      Sweden      Swedish     Female
-cafrenchfemale       Canadian    French      Female
-cafrenchmale         Canadian    French      Male
-arabicmale           Dubai       Arabic      Male"
+		# extractor command:
+		# curl -s http://www.ispeech.org/html/tts-demo.php | grep "<li class=\"voices\" id=\"" | sed 's/&nbsp;//g' | sed -n -e 's/.*id="\([^"]\+\).*<a.*">\([^"]\+\)<\/a.*/\1;\2/p' | sort -t':' -k2 | column -s ";" -c1 -t
+		# extracted on: 2017-09-09
+		echo "Voice                Language"
+		echo "-------------------- ---------------------"
+		echo "arabicmale           Arabic Male
+auenglishfemale      Australian English Female
+brportuguesefemale   Brazilian Portuguese Female
+caenglishfemale      Canadian English Female
+cafrenchfemale       Canadian French Female
+cafrenchmale         Canadian French Male
+chchinesefemale      Chinese Female
+eurcatalanfemale     European Catalan Female
+eurczechfemale       European Czech Female
+eurdanishfemale      European Danish Female
+eurdutchfemale       European Dutch Female
+eurfinnishfemale     European Finnish Female
+eurfrenchfemale      European French Female
+eurfrenchmale        European French Male
+eurgermanfemale      European German Female
+eurgermanmale        European German Male
+eurgreekfemale       European Greek Female
+euritalianfemale     European Italian Female
+euritalianmale       European Italian Male
+eurnorwegianfemale   European Norweigian Female
+eurpolishfemale      European Polish Female
+eurportuguesefemale  European Portuguese Female
+eurportuguesemale    European Portuguese Male
+eurspanishfemale     European Spanish Female
+eurspanishmale       European Spanish Male
+eurturkishfemale     European Turkish Female
+eurturkishmale       European Turkish Male
+hkchinesefemale      Hong Kong Catonese Female
+huhungarianfemale    Hungarian Female
+jpjapanesefemale     Japanese Female
+krkoreanfemale       Korean Female
+rurussianfemale      Russian Female
+rurussianmale        Russian Male
+swswedishfemale      Swedish Female
+twchinesefemale      Taiwan Chinese Female
+ukenglishfemale      UK English Female
+ukenglishmale        UK English Male
+usenglishfemale      US English Female
+usenglishmale        US English Male
+usspanishfemale      US Spanish Female
+usspanishmale        US Spanish Male"
                 ;;
         voice)
-                eval ${FUNCNAME} voices 2>&1 | grep -F -w -- "$VOICE" | head -n1 | awk '{print $1}'
+                eval ${FUNCNAME} voices 2>&1 | grep -i -F -w -- "$VOICE" | head -n1 | awk '{print $1}'
                 ;;
         synthesize)
                 local TTS_STRING_CONTENT="$(urlencode "$(cat "$IN" | parse_tts_string)")"
                 local TTS_VOICE="$(eval ${FUNCNAME} voice $VOICE)"
+		[ -z "$TTS_ENGINE_ISPEECH_APIKEY" ] && echo && print_help_config && exit 1
 
-		curl -s "http://www.ispeech.org/p/generic/getaudio?text=$TTS_STRING_CONTENT&voice=$TTS_VOICE&speed=0&action=convert" -o "$OUT"
+                curl -s "http://api.ispeech.org/api/rest?apikey=$TTS_ENGINE_ISPEECH_APIKEY&action=convert&voice=$TTS_VOICE&text=$TTS_STRING_CONTENT" -o "$OUT"
+
+		# old from demo area
+		#curl -s "https://www.ispeech.org/p/generic/getaudio?text=$TTS_STRING_CONTENT&voice=$TTS_VOICE&speed=0&action=convert" -o "$OUT"
                 ;;
         *)
                 echo "${FUNCNAME}: wrong method called - abort"
@@ -219,7 +227,7 @@ tts_engine_google() {
 
   case $ACTION in
         description)
-                echo "2016-05-01 Remote GoogleVoice NO Google http://translate.google.com"
+                echo "2017-09-09 Remote GoogleVoice NO Google http://translate.google.com"
                 ;;
         help)
                 echo "this engine is limited to 160 chars max"
@@ -236,128 +244,131 @@ tts_engine_google() {
                 echo "curl"
                 ;;
         voices)
-		echo "af  Afrikaans
-sq  Albanian
-am  Amharic
-ar  Arabic
-hy  Armenian
-az  Azerbaijani
-eu  Basque
-be  Belarusian
-bn  Bengali
-bh  Bihari
-bs  Bosnian
-br  Breton
-bg  Bulgarian
-km  Cambodian
-ca  Catalan
-zh-CN Chinese (Simplified)
-zh-TW Chinese (Traditional)
-co  Corsican
-hr  Croatian
-cs  Czech
-da  Danish
-nl  Dutch
-en  English
-eo  Esperanto
-et  Estonian
-fo  Faroese
-tl  Filipino
-fi  Finnish
-fr  French
-fy  Frisian
-gl  Galician
-ka  Georgian
-de  German
-el  Greek
-gn  Guarani
-gu  Gujarati
-ha  Hausa
-iw  Hebrew
-hi  Hindi
-hu  Hungarian
-is  Icelandic
-id  Indonesian
-ia  Interlingua
-ga  Irish
-it  Italian
-ja  Japanese
-jw  Javanese
-kn  Kannada
-kk  Kazakh
-rw  Kinyarwanda
-rn  Kirundi
-ko  Korean
-ku  Kurdish
-ky  Kyrgyz
-lo  Laothian
-la  Latin
-lv  Latvian
-ln  Lingala
-lt  Lithuanian
-mk  Macedonian
-mg  Malagasy
-ms  Malay
-ml  Malayalam
-mt  Maltese
-mi  Maori
-mr  Marathi
-mo  Moldavian
-mn  Mongolian
-sr-ME Montenegrin
-ne  Nepali
-no  Norwegian
-nn  Norwegian (Nynorsk)
-oc  Occitan
-or  Oriya
-om  Oromo
-ps  Pashto
-fa  Persian
-pl  Polish
-pt-BR Portuguese (Brazil)
-pt-PT Portuguese (Portugal)
-pa  Punjabi
-qu  Quechua
-ro  Romanian
-rm  Romansh
-ru  Russian
-gd  Scots Gaelic
-sr  Serbian
-sh  Serbo-Croatian
-st  Sesotho
-sn  Shona
-sd  Sindhi
-si  Sinhalese
-sk  Slovak
-sl  Slovenian
-so  Somali
-es  Spanish
-su  Sundanese
-sw  Swahili
-sv  Swedish
-tg  Tajik
-ta  Tamil
-tt  Tatar
-te  Telugu
-th  Thai
-ti  Tigrinya
-to  Tonga
-tr  Turkish
-tk  Turkmen
-tw  Twi
-ug  Uighur
-uk  Ukrainian
-ur  Urdu
-uz  Uzbek
-vi  Vietnamese
-cy  Welsh
-xh  Xhosa
-yi  Yiddish
-yo  Yoruba
-zu  Zulu" | sort | column -c1 -t
+		# extractor command:
+		# curl -s "https://cloud.google.com/speech/docs/languages" | grep -e ^"<tr" -e ^"<td" -e ^"</tr" | sed '/<tr>/,+1 d' | sed ':a;N;$!ba;s/<\/td>\n/<\/td>/g' | sed -e 's/<[^>]*>/;/g' | awk -F";" '{print $2";"$4}' | sort | column -s ";" -c1 -t
+		# extracted on: 2017-09-08
+		echo "af-ZA        Afrikaans (South Africa)
+am-ET        Amharic (Ethiopia)
+ar-AE        Arabic (United Arab Emirates)
+ar-BH        Arabic (Bahrain)
+ar-DZ        Arabic (Algeria)
+ar-EG        Arabic (Egypt)
+ar-IL        Arabic (Israel)
+ar-IQ        Arabic (Iraq)
+ar-JO        Arabic (Jordan)
+ar-KW        Arabic (Kuwait)
+ar-LB        Arabic (Lebanon)
+ar-MA        Arabic (Morocco)
+ar-OM        Arabic (Oman)
+ar-PS        Arabic (State of Palestine)
+ar-QA        Arabic (Qatar)
+ar-SA        Arabic (Saudi Arabia)
+ar-TN        Arabic (Tunisia)
+az-AZ        Azerbaijani (Azerbaijan)
+bg-BG        Bulgarian (Bulgaria)
+bn-BD        Bengali (Bangladesh)
+bn-IN        Bengali (India)
+ca-ES        Catalan (Spain)
+cmn-Hans-CN  Chinese, Mandarin (Simplified, China)
+cmn-Hans-HK  Chinese, Mandarin (Simplified, Hong Kong)
+cmn-Hant-TW  Chinese, Mandarin (Traditional, Taiwan)
+cs-CZ        Czech (Czech Republic)
+da-DK        Danish (Denmark)
+de-DE        German (Germany)
+el-GR        Greek (Greece)
+en-AU        English (Australia)
+en-CA        English (Canada)
+en-GB        English (United Kingdom)
+en-GH        English (Ghana)
+en-IE        English (Ireland)
+en-IN        English (India)
+en-KE        English (Kenya)
+en-NG        English (Nigeria)
+en-NZ        English (New Zealand)
+en-PH        English (Philippines)
+en-TZ        English (Tanzania)
+en-US        English (United States)
+en-ZA        English (South Africa)
+es-AR        Spanish (Argentina)
+es-BO        Spanish (Bolivia)
+es-CL        Spanish (Chile)
+es-CO        Spanish (Colombia)
+es-CR        Spanish (Costa Rica)
+es-DO        Spanish (Dominican Republic)
+es-EC        Spanish (Ecuador)
+es-ES        Spanish (Spain)
+es-GT        Spanish (Guatemala)
+es-HN        Spanish (Honduras)
+es-MX        Spanish (Mexico)
+es-NI        Spanish (Nicaragua)
+es-PA        Spanish (Panama)
+es-PE        Spanish (Peru)
+es-PR        Spanish (Puerto Rico)
+es-PY        Spanish (Paraguay)
+es-SV        Spanish (El Salvador)
+es-US        Spanish (United States)
+es-UY        Spanish (Uruguay)
+es-VE        Spanish (Venezuela)
+eu-ES        Basque (Spain)
+fa-IR        Persian (Iran)
+fi-FI        Finnish (Finland)
+fil-PH       Filipino (Philippines)
+fr-CA        French (Canada)
+fr-FR        French (France)
+gl-ES        Galician (Spain)
+gu-IN        Gujarati (India)
+he-IL        Hebrew (Israel)
+hi-IN        Hindi (India)
+hr-HR        Croatian (Croatia)
+hu-HU        Hungarian (Hungary)
+hy-AM        Armenian (Armenia)
+id-ID        Indonesian (Indonesia)
+is-IS        Icelandic (Iceland)
+it-IT        Italian (Italy)
+ja-JP        Japanese (Japan)
+jv-ID        Javanese (Indonesia)
+ka-GE        Georgian (Georgia)
+km-KH        Khmer (Cambodia)
+kn-IN        Kannada (India)
+ko-KR        Korean (South Korea)
+lo-LA        Lao (Laos)
+lt-LT        Lithuanian (Lithuania)
+lv-LV        Latvian (Latvia)
+ml-IN        Malayalam (India)
+mr-IN        Marathi (India)
+ms-MY        Malay (Malaysia)
+nb-NO        Norwegian Bokmål (Norway)
+ne-NP        Nepali (Nepal)
+nl-NL        Dutch (Netherlands)
+pl-PL        Polish (Poland)
+pt-BR        Portuguese (Brazil)
+pt-PT        Portuguese (Portugal)
+ro-RO        Romanian (Romania)
+ru-RU        Russian (Russia)
+si-LK        Sinhala (Srilanka)
+sk-SK        Slovak (Slovakia)
+sl-SI        Slovenian (Slovenia)
+sr-RS        Serbian (Serbia)
+su-ID        Sundanese (Indonesia)
+sv-SE        Swedish (Sweden)
+sw-KE        Swahili (Kenya)
+sw-TZ        Swahili (Tanzania)
+ta-IN        Tamil (India)
+ta-LK        Tamil (Sri Lanka)
+ta-MY        Tamil (Malaysia)
+ta-SG        Tamil (Singapore)
+te-IN        Telugu (India)
+th-TH        Thai (Thailand)
+tr-TR        Turkish (Turkey)
+uk-UA        Ukrainian (Ukraine)
+ur-IN        Urdu (India)
+ur-PK        Urdu (Pakistan)
+vi-VN        Vietnamese (Vietnam)
+yue-Hant-HK  Chinese, Cantonese (Traditional, Hong Kong)
+zu-ZA        Zulu (South Africa)"
                 ;;
         voice)
-                eval ${FUNCNAME} voices | grep -w -- "$VOICE" | head -n1 | awk '{print $1}'
+                eval ${FUNCNAME} voices 2>&1 | grep -i -F -w -- "$VOICE" | head -n1 | awk '{print $1}'
                 ;;
         synthesize)
                 local TTS_STRING_CONTENT="$(urlencode "$(cat "$IN" | parse_tts_string)")"
@@ -390,7 +401,7 @@ tts_engine_voicerss() {
                 echo "Get the VoiceRSS API KEY from: http://www.voicerss.org/personel"
                 echo "and put the following variable info '$IZSYNTH_CONFIG_FILE' config file:"
                 echo
-                echo "VOICERSS_APIKEY=\"your_api_key_hash_go_here\""
+                echo "TTS_ENGINE_ISPEECH_TTS_ENGINE_VOICERSS_APIKEY=\"1234567890abcdefghilmnopqtwxyz\""
                 ;;
         env)
                 # default output file format
@@ -403,18 +414,45 @@ tts_engine_voicerss() {
                 echo "curl"
                 ;;
         voices)
-                # extract languages and voices list and make the output
-                curl -s "http://www.voicerss.org/api/demo.aspx" | grep "option value=" | grep -v "value=\"\"" | awk -F \" '{print $2 $3}' | awk -F "[><]" '{print $1" "$2}'
+		# extractor command:
+                # curl -s "http://www.voicerss.org/api/demo.aspx" | grep "option value=" | grep -v "value=\"\"" | awk -F \" '{print $2 $3}' | awk -F "[><]" '{print $1" "$2}'
+		# extracted on: 2017-09-08
+		echo "ca-es Catalan
+zh-cn Chinese (China)
+zh-hk Chinese (Hong Kong)
+zh-tw Chinese (Taiwan)
+da-dk Danish
+nl-nl Dutch
+en-au English (Australia)
+en-ca English (Canada)
+en-gb English (Great Britain)
+en-in English (India)
+en-us English (United States)
+fi-fi Finnish
+fr-ca French (Canada)
+fr-fr French (France)
+de-de German
+it-it Italian
+ja-jp Japanese
+ko-kr Korean
+nb-no Norwegian
+pl-pl Polish
+pt-br Portuguese (Brazil)
+pt-pt Portuguese (Portugal)
+ru-ru Russian
+es-mx Spanish (Mexico)
+es-es Spanish (Spain)
+sv-se Swedish (Sweden)"
                 ;;
         voice)
-                eval ${FUNCNAME} voices 2>&1 | grep -F -w -- "$VOICE" | head -n1 | awk '{print $1}'
+                eval ${FUNCNAME} voices 2>&1 | grep -i -F -w -- "$VOICE" | head -n1 | awk '{print $1}'
                 ;;
         synthesize)
                 local TTS_STRING_CONTENT="$(urlencode "$(cat "$IN" | parse_tts_string)")"
                 local TTS_VOICE="$(eval ${FUNCNAME} voice $VOICE)"
-                [ -z "$VOICERSS_APIKEY" ] && echo && print_help_config && exit 1
+                [ -z "$TTS_ENGINE_VOICERSS_APIKEY" ] && echo && print_help_config && exit 1
 
-                curl -s "http://api.voicerss.org/?key=$VOICERSS_APIKEY&src=$TTS_STRING_CONTENT&f=44khz_16bit_mono&hl=$TTS_VOICE" -o "$OUT"
+                curl -s "http://api.voicerss.org/?key=$TTS_ENGINE_VOICERSS_APIKEY&src=$TTS_STRING_CONTENT&f=44khz_16bit_mono&hl=$TTS_VOICE" -o "$OUT"
                 ;;
         *)
                 echo "${FUNCNAME}: wrong method called - abort"
@@ -434,7 +472,7 @@ tts_engine_naturalreaders() {
 
   case $ACTION in
 	description)
-		echo "2017-09-08 Remote NaturalReader YES Custom http://www.naturalreaders.com"
+		echo "2017-09-08 Remote NaturalReader NO Custom http://www.naturalreaders.com"
 		;;
 	help)
 		echo "No help available for $TTS_ENGINE"
@@ -449,9 +487,9 @@ tts_engine_naturalreaders() {
 		echo "curl"
 		;;
 	voices)
-		# extracted from www.naturalreaders.com on 2017-09-08
-		# oneliner command:
+		# extractor command:
 		# curl -s https://www.naturalreaders.com/online/main.bc6d1a3c4945c5af706b.bundle.js | uglifyjs --beautify | grep ", this.premiumVoices.push(n), " | sed 's/this.premiumVoices.push(n), /'\\\n'/g' | sed -e 's/^[ \t]*//' | sed '/^$/d' | awk -F'[()]' '{print $2}' | sed 's/"//g' | sed 's/ //g' | sort | uniq | awk -F, '{print $2" "$1" "$3" "$4}' | sort | column -c1 -t
+		# extracted on 2017-09-08
 		echo "de-DE  Klara     att    6
 de-DE  Klaus     aca    28
 de-DE  Petra     apple  11
@@ -553,10 +591,29 @@ tts_engine_fromtexttospeech() {
 		echo "curl"
 		;;
 	voices)
-                curl -s http://www.fromtexttospeech.com | grep "voice_indexes\['" | awk -F = '{print $2}' | sed '/^$/d' | sed "s/ '//" | sed "s/';//"
+		# extractor command:
+                # curl -s http://www.fromtexttospeech.com | grep "voice_indexes\['" | awk -F = '{print $2}' | sed '/^$/d' | sed "s/ '//" | sed "s/';//"
+		# extracted on 2017-09-08
+		echo "IVONA Amy22 (UK English)
+IVONA Brian22 (UK English)
+IVONA CΘline22 (French)
+IVONA Mathieu22 (French)
+IVONA Marlene22 (German)
+IVONA Hans22 (German)
+IVONA Tatyana22 (Russian)
+IVONA Eric22
+IVONA Jennifer22
+IVONA Joey22
+IVONA Kimberly22
+IVONA Salli22
+IVONA Carla22 (Italian)
+IVONA Giorgio22 (Italian)
+IVONA Conchita22 (Spanish [Modern])
+IVONA Enrique22 (Spanish [Modern])
+IVONA Cristiano22 (Portuguese)"
 		;;
         voice)
-		eval ${FUNCNAME} voices 2>&1 | grep -F -w -- "$VOICE" | head -n1 | tr -d [:cntrl:] | awk -F: '{print $1}'
+		eval ${FUNCNAME} voices 2>&1 | grep -i -F -w -- "$VOICE" | head -n1 | tr -d [:cntrl:] | awk -F: '{print $1}'
                 ;;
 	synthesize)
 		local TTS_STRING_CONTENT="$(cat $IN)"
@@ -699,7 +756,7 @@ tts_engine_sapi5() {
 		sapi2wav.exe -list 2>&1 | grep -v "wineboot.exe"
 		;;
 	voice)
-		eval ${FUNCNAME} voices 2>&1 | grep -F -w -- "$VOICE" | head -n1 | tr -d [:cntrl:] | awk -F: '{print $1}'
+		eval ${FUNCNAME} voices 2>&1 | grep -i -F -w -- "$VOICE" | head -n1 | tr -d [:cntrl:] | awk -F: '{print $1}'
 		;;
 	synthesize)
                 # convert utf-8 text file to iso-8859-15
@@ -766,7 +823,8 @@ playback_engine_mplayer() {
 
 write_default_config() {
 echo "# ENGINE SPECIFIC API KEYS
-#VOICERSS_APIKEY=\"your_api_key_hash_go_here\"
+#TTS_ENGINE_VOICERSS_APIKEY=\"$TTS_ENGINE_VOICERSS_APIKEY\"
+#TTS_ENGINE_ISPEECH_APIKEY=\"$TTS_ENGINE_ISPEECH_APIKEY\"
  
 # default tts engine
 TTS_ENGINE=\"$TTS_ENGINE\"
@@ -1596,7 +1654,7 @@ $NAME -i /tmp/src/company-welcome.txt -o /tmp/dst -m /tmp/music.mp3 -e "$TTS_ENG
 $NAME -i /tmp/src -o /tmp/dst -m /tmp/music.mp3 -e "$TTS_ENGINE" -v "$TTS_VOICE" -p 7 -P 10 -F 7 -S 10 -x
 
 # synthesize multiple file with different languages using a single pipe line (named MEGAMIX feature)
-$NAME -i naturalreaders:Francesca:txt/it/company-it-welcome.txt -i voicerss:en-gb:txt/en/company-en-welcome.txt -o sounds -m audio/musiconhold.mp3 -p 7 -P 10 -F 7 -S 10 -x"
+$NAME -i naturalreaders:Luca:txt/it/company-it-welcome.txt -i voicerss:en-gb:txt/en/company-en-welcome.txt -o sounds -m audio/musiconhold.mp3 -p 7 -P 10 -F 7 -S 10 -x"
 }
 
 # command prompt menu
@@ -1875,8 +1933,14 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 
 # ChangeLog:
 # ============================================================================
-# 4.8 - 20170907
+# 4.8 - 20170909
 # - Implemented cksum hash file names when creating tts files from cli (thanks to Jean-Marc Leglise for the idea). So every txt/tts file will always have an unique file name based on contents.
+# - updated engine: naturalreaders
+# - updated engine: google
+# - updated engine: ispeech (now need an apykey)
+# - now tts voices can be case insensitive
+# - renamed VOICERSS_APIKEY config field to TTS_ENGINE_VOICERSS_APIKEY
+# - misc optimizations
 
 # 4.7 - 20170428
 # - renamed command line option: -x to -b
