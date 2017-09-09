@@ -1435,7 +1435,7 @@ check_env() {
 
   # make an input file where paste the given text string
   # [ -n "$TTS_STRING" ] &&  IN_FILE=("$TMP_DIR/$(echo "$TTS_STRING" | sed -e 's/[^A-Za-z0-9_-]/_/g' | cut -c-64).txt") && echo "$TTS_STRING" > "$IN_FILE"
-  [ -n "$TTS_STRING" ] &&  IN_FILE=("$TMP_DIR/$(echo "$TTS_STRING" | sed -e 's/[^A-Za-z0-9_-]/_/g' | cut -c-32)-$(echo "$TTS_STRING-$TTS_ENGINE-$TTS_VOICE-$TTS_VOLUME" | cksum | cut -d" " -f1).txt") && echo "$TTS_STRING" > "$IN_FILE"
+  [ -n "$TTS_STRING" ] &&  IN_FILE=("$TMP_DIR/$(echo "$TTS_STRING" | sed -e 's/[^A-Za-z0-9_-]/_/g' | cut -c-64)-$(echo "$TTS_STRING-$TTS_ENGINE-$TTS_VOICE-$TTS_VOLUME" | cksum | cut -d" " -f1).txt") && echo "$TTS_STRING" > "$IN_FILE"
 
   #if is_array IN_FILE ; then echo IN_FILE è un array; fi
   #[[ -z "${TTS_STRING}" && ! -f "${IN_FILE}" && ! -d "${IN_FILE}" ]] && echo "ERROR: ${IN_FILE}: invalid input file/directory - abort." >&2 && exit 1
