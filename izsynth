@@ -980,7 +980,8 @@ urlencode() {
 
 # remove all new lines, double white spaces and ending spaces to avoid problems when encoding url
 parse_tts_string() {
-  tr '\n' ' ' | sed 's/  \+/ /g' | sed 's/^[ \t]*//;s/[ \t]*$//' | sed 's/ *\([[:punct:]]\) */\1 /g'
+  #tr '\n' ' ' | sed 's/  \+/ /g' | sed 's/^[ \t]*//;s/[ \t]*$//' | sed 's/ *\([[:punct:]]\) */\1 /g'
+  tr '\n' ' ' | sed 's/  \+/ /g' | sed 's/^[ \t]*//;s/[ \t]*$//' | sed 's/ *\([,;:.]\) */\1 /g'
 }
 
 # because some engines allow only limited string length, we must count how many chars we have and pass only the max allowed to the engine
