@@ -980,9 +980,9 @@ urlencode() {
 
 # remove all new lines, double white spaces and ending spaces to avoid problems when encoding url
 parse_tts_string() {
+  #tr '\n' ' ' | sed 's/  \+/ /g' | sed 's/^[ \t]*//;s/[ \t]*$//'
   #tr '\n' ' ' | sed 's/  \+/ /g' | sed 's/^[ \t]*//;s/[ \t]*$//' | sed 's/ *\([[:punct:]]\) */\1 /g'
-  #tr '\n' ' ' | sed 's/  \+/ /g' | sed 's/^[ \t]*//;s/[ \t]*$//' | sed 's/ *\([,;:.]\) */\1 /g'
-  tr '\n' ' ' | sed 's/  \+/ /g' | sed 's/^[ \t]*//;s/[ \t]*$//'
+  tr '\n' ' ' | sed 's/  \+/ /g' | sed 's/ *\([,;:.]\) */\1 /g' | sed 's/^[ \t]*//;s/[ \t]*$//'
 }
 
 # because some engines allow only limited string length, we must count how many chars we have and pass only the max allowed to the engine
@@ -1431,6 +1431,9 @@ check_env() {
 
   # set default variables
   [ -z "$OUTPUT_OVERWRITE" ] && OUTPUT_OVERWRITE="yes"
+
+  # if exporting to pbx format, always overwrite the destination
+  [ "$EXPORT_AUDIO" = "yes" ] && OUTPUT_OVERWRITE="yes"
 
   # check if no args are given and make some sanity checks
   [[ -z "${TTS_STRING}" && -z "${IN_FILE}" ]] && echo "ERROR: no text STRING/FILE/DIRECTORY specified, use '-t' or '-i' option - abort." >&2 && exit 1
