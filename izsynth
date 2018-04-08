@@ -14,8 +14,8 @@
 # script variables
 NAME="izsynth"
 DESCRIPTION="TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems"
-VERSION="4.8"
-VERSION_DATE="20170909"
+VERSION="4.9"
+VERSION_DATE="20180408"
 
 #####################################
 ## default suggested user variables to change 
@@ -49,10 +49,10 @@ PLAYBACK="yes"
 PLAYBACK_BACKGROUND="yes"
 
 # command used to play the synthesized audio file (mplayer example)
-PLAYBACK_COMMAND="mplayer"
+PLAYBACK_ENGINE="mplayer"
 
 # default playback command options (mplayer example)
-#PLAYBACK_COMMAND_OPTS="-quiet -nolirc -noconsolecontrols"
+#PLAYBACK_ENGINE_OPTS="-quiet -nolirc -noconsolecontrols"
 
 # default playback device (mplayer example)
 #PLAYBACK_DEVICE="alsa"
@@ -780,10 +780,50 @@ tts_engine_sapi5() {
 # START PLAYBACK ENGINES
 # add others PLAYBACK engines here
 
+playback_engine_generic() {
+  local ACTION="$1"
+  shift
+  local IN="$1"
+
+  case $ACTION in
+        description)
+		echo "2018-04-08 Generic Playback Engine"
+                ;;
+        help)
+                echo "Generic Playback Engine: $PLAYBACK_COMMAND"
+		echo "No support for default playback device, volume, options"
+                ;;
+        env)
+                # set default options
+                #[ -z "$PLAYBACK_ENGINE_OPTS" ] && PLAYBACK_ENGINE_OPTS+=""
+
+                # change playback device. default: do not change playback device (suggested: alsa)
+                #[ -z "$PLAYBACK_DEVICE" ] || PLAYBACK_ENGINE_OPTS+=""
+
+                # change playback volume. default: do not change output volume
+                #[ -z "$PLAYBACK_VOLUME" ] || PLAYBACK_ENGINE_OPTS+=""
+                ;;
+        commands)
+                echo "$PLAYBACK_COMMAND"
+                ;;
+        play)
+                $PLAYBACK_COMMAND $PLAYBACK_ENGINE_OPTS "$IN"
+                ;;
+        *)
+                echo "${FUNCNAME}: wrong method called - abort"
+                exit 1
+                ;;
+  esac
+}
+
+
+
 playback_engine_mplayer() {
   local ACTION="$1"
   shift
   local IN="$1"
+
+  PLAYBACK_COMMAND="mplayer"
 
   case $ACTION in
         description)
@@ -795,19 +835,19 @@ playback_engine_mplayer() {
                 ;;
         env)
                 # set default options
-                [ -z "$PLAYBACK_COMMAND_OPTS" ] && PLAYBACK_COMMAND_OPTS+=" -quiet -nolirc -noconsolecontrols -afm mp3lib,ffmpeg"
+                [ -z "$PLAYBACK_ENGINE_OPTS" ] && PLAYBACK_ENGINE_OPTS+=" -quiet -nolirc -noconsolecontrols -afm mp3lib,ffmpeg"
 
                 # change playback device. default: do not change playback device (suggested: alsa)
-                [ -z "$PLAYBACK_DEVICE" ] || PLAYBACK_COMMAND_OPTS+=" -ao $PLAYBACK_DEVICE"
+                [ -z "$PLAYBACK_DEVICE" ] || PLAYBACK_ENGINE_OPTS+=" -ao $PLAYBACK_DEVICE"
 
                 # change playback volume. default: do not change output volume
-                [ -z "$PLAYBACK_VOLUME" ] || PLAYBACK_COMMAND_OPTS+=" -volume $PLAYBACK_VOLUME"
+                [ -z "$PLAYBACK_VOLUME" ] || PLAYBACK_ENGINE_OPTS+=" -volume $PLAYBACK_VOLUME"
                 ;;
         commands)
-                echo "mplayer"
+                echo "$PLAYBACK_COMMAND"
                 ;;
         play)
-                mplayer $PLAYBACK_COMMAND_OPTS "$IN"
+                $PLAYBACK_COMMAND $PLAYBACK_ENGINE_OPTS "$IN"
                 ;;
         *)
                 echo "${FUNCNAME}: wrong method called - abort"
@@ -854,10 +894,10 @@ PLAYBACK=\"$PLAYBACK\"
 PLAYBACK_BACKGROUND=\"$PLAYBACK_BACKGROUND\"
 
 # command used to play the synthesized audio file
-PLAYBACK_COMMAND=\"$PLAYBACK_COMMAND\"
+PLAYBACK_ENGINE=\"$PLAYBACK_ENGINE\"
  
 # default playback command options
-PLAYBACK_COMMAND_OPTS=\"$PLAYBACK_COMMAND_OPTS\"
+PLAYBACK_ENGINE_OPTS=\"$PLAYBACK_ENGINE_OPTS\"
  
 # default playback device
 PLAYBACK_DEVICE=\"$PLAYBACK_DEVICE\"
@@ -954,12 +994,15 @@ playback_engines_list(){
 playback_engines_check() {
   if [ -z "$1" ] || [ -z "$(playback_engines_list | grep -w "$1")" ]
     then
- 	echo "ERROR: wrong PLAYBACK engine specified: '$1'"
-	echo
-	echo "please select an engine from the following list:"
-	echo
-	playback_engines_list
-	exit 1
+ 	#echo "INFO: using generic engine for playback with command: '$1'"
+        PLAYBACK_COMMAND="$PLAYBACK_ENGINE"
+        PLAYBACK_ENGINE="generic"
+ 	#echo "ERROR: wrong PLAYBACK engine specified: '$1'"
+	#echo
+	#echo "please select an engine from the following list:"
+	#echo
+	#playback_engines_list
+	#exit 1
   fi
 }
 
@@ -1074,26 +1117,26 @@ synthesize_file() {
 playback_file () {
   local IN="$1"
 
-  # verify if the given PLAYBACK_COMMAND engine exist
-  playback_engines_check $PLAYBACK_COMMAND
+  # verify if the given PLAYBACK_ENGINE engine exist
+  playback_engines_check $PLAYBACK_ENGINE
 
   # load the playback_engine env
-  playback_engine_$PLAYBACK_COMMAND env
+  playback_engine_$PLAYBACK_ENGINE env
 
   # if we must remove the synthesized file, of course we can't remove it if PLAYBACK_BACKGROUND=yes
   [ "$OUTPUT_REMOVE" = "yes" ] && PLAYBACK_BACKGROUND="no"
 
-  echo "Playing      - input:[$IN] command:[$PLAYBACK_COMMAND] options:[$PLAYBACK_COMMAND_OPTS]"
+  echo "Playing      - input:[$IN] command:[$PLAYBACK_COMMAND] options:[$PLAYBACK_ENGINE_OPTS]"
 
   if [ "$PLAYBACK_BACKGROUND" = "yes" ]
     then
       # do not block the command execution
-      #$PLAYBACK_COMMAND $PLAYBACK_COMMAND_OPTS "$IN" 1>/dev/null &
-      playback_engine_$PLAYBACK_COMMAND play "$IN" 1>/dev/null &
+      #$PLAYBACK_ENGINE $PLAYBACK_ENGINE_OPTS "$IN" 1>/dev/null &
+      playback_engine_$PLAYBACK_ENGINE play "$IN" 1>/dev/null &
     else
       # wait playback to finish before exit from izsynth
-      #$PLAYBACK_COMMAND $PLAYBACK_COMMAND_OPTS "$IN" 1>/dev/null
-      playback_engine_$PLAYBACK_COMMAND play "$IN" 1>/dev/null
+      #$PLAYBACK_ENGINE $PLAYBACK_ENGINE_OPTS "$IN" 1>/dev/null
+      playback_engine_$PLAYBACK_ENGINE play "$IN" 1>/dev/null
   fi
 }
 
@@ -1698,8 +1741,8 @@ Background music management:
 Soundcard audio playback options:
   -b                         Playback the generated files using the soundcard speakers (current: $PLAYBACK)
   -B                         Playback in background detaching the $NAME command (current: $PLAYBACK_BACKGROUND) (only if PLAYBACK=yes)
-  -k                         Playback command (current: $PLAYBACK_COMMAND)
-  -K                         Playback command options (current: $([ ! -z "$PLAYBACK_COMMAND_OPTS" ] && echo -e -n "$PLAYBACK_COMMAND_OPTS" || echo -e -n "none"))
+  -k                         Playback engine (current: $PLAYBACK_ENGINE)
+  -K                         Playback engine options (current: $([ ! -z "$PLAYBACK_ENGINE_OPTS" ] && echo -e -n "$PLAYBACK_ENGINE_OPTS" || echo -e -n "none"))
   -d                         Playback output device (current: $([ -z "$PLAYBACK_DEVICE" ] && echo -e -n "default"))
   -D                         List available playback output devices
   -W     <volume>            Change the playback soundcard output volume (current: $([ ! -z "$PLAYBACK_VOLUME" ] && echo -e -n "$PLAYBACK_VOLUME" || echo -e -n "none) (use a number from 0 to 100"))
@@ -1840,11 +1883,11 @@ while getopts "t:i:o:m:S:p:P:F:M:T:e:v:d:k:K:W:X:slLrxwbBDChHEV" option ; do
 
 	exit 0
 	;;
-    k) # playback command
-        PLAYBACK_COMMAND="${OPTARG}"
+    k) # playback engine
+        PLAYBACK_ENGINE="${OPTARG}"
 	;;
-    K) # playback command extra options
-        PLAYBACK_COMMAND_OPTS="${OPTARG}"
+    K) # playback engine extra options
+        PLAYBACK_ENGINE_OPTS="${OPTARG}"
 	;;
     C) # write/overwrite user config file
         if [ -e "$IZSYNTH_CONFIG_FILE" ]; then
@@ -1938,6 +1981,9 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 
 # ChangeLog:
 # ============================================================================
+# 4.9 - 20180408
+# - Implemented generic playback engine support. You can use -k to specify your playback command, and -K for the command options
+
 # 4.8 - 20170909
 # - Implemented cksum hash file names when creating tts files from cli (thanks to Jean-Marc Leglise for the idea). So every txt/tts file will always have an unique file name based on contents.
 # - updated engine: naturalreaders
