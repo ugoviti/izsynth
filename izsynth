@@ -15,7 +15,7 @@
 NAME="izsynth"
 DESCRIPTION="TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems"
 VERSION="4.9"
-VERSION_DATE="20180408"
+VERSION_DATE="20181114"
 
 #####################################
 ## default suggested user variables to change 
@@ -1229,7 +1229,8 @@ export_file() {
                         ;;
       esac
 
-      if [[ ! -e "$OUT" || "$OUTPUT_OVERWRITE" = "yes" ]]; then
+      # overwrite only if input and output file are not the same 
+      if [[ "$IN" != "$OUT" ]] && [[ ! -e "$OUT" || "$OUTPUT_OVERWRITE" = "yes" ]]; then
         # convert to pbx formats
         sox -V1 $SOX_OPTS "$IN" $SOX_OPTS_FORMAT "$OUT" lowpass 4000
 
@@ -1331,6 +1332,7 @@ assemble_file() {
             remix_file "$OUT_TMP" "$OUT_TMP_REMIXED"
             save_file  "$OUT_TMP_REMIXED" "$OUT"
           else
+	   # save the generated file if they are not in the same location
            [ "$OUT_TMP" != "$OUT" ] && save_file "$OUT_TMP" "$OUT"
        fi
        else
@@ -1619,6 +1621,7 @@ main() {
     #  local OUT="$TMP_DIR/$(print_name $IN).44khz.wav"
     #fi
 
+
     if [[ -e "$OUT" && "$OUTPUT_OVERWRITE" = "no" ]]; then
         # resynth the audio file only if the previous saved file was corrupted or with wrong format
         if [ "$(show_mime_brief "$OUT")" != "audio" ]; then
@@ -1629,6 +1632,8 @@ main() {
 		echo "File exist   - input:[$OUT]"
 	fi
       else
+        # reset the output file name path
+        [ "$EXPORT_AUDIO" = "yes" ] && local OUT="$(print_path $OUT)/$(print_name $OUT).44khz.wav"
         assemble_file "$IN" "$OUT"
     fi
 
@@ -1750,7 +1755,7 @@ Soundcard audio playback options:
 
 Output file options:
   -x                         Export the generated audio file into PBX formats (current: $EXPORT_AUDIO) (yes = this will assume PLAYBACK=no and OUTPUT_OVERWRITE=yes)
-  -X                         Export using the following audio formats (current: \"$EXPORT_AUDIO_FORMATS\") (valid only if EXPORT_AUDIO=yes))
+  -X                         Export using the following audio formats (current: \"$EXPORT_AUDIO_FORMATS\") (valid only if EXPORT_AUDIO=yes)
   -w                         Overwrite the synthesized file (current: $OUTPUT_OVERWRITE)
   -s                         Split destination audio files into audio formats sub directories (current: $EXPORT_AUDIO_FORMAT_SUBDIR) (valid only if EXPORT_AUDIO=yes)
 
@@ -1981,8 +1986,9 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 
 # ChangeLog:
 # ============================================================================
-# 4.9 - 20180408
+# 4.9 - 20181114
 # - Implemented generic playback engine support. You can use -k to specify your playback command, and -K for the command options
+# - fix: when exporting pbx files doesn't rename 44khz.wav to mp3
 
 # 4.8 - 20170909
 # - Implemented cksum hash file names when creating tts files from cli (thanks to Jean-Marc Leglise for the idea). So every txt/tts file will always have an unique file name based on contents.
