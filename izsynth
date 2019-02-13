@@ -95,7 +95,7 @@ MUSIC_FADE="5"
 [ -z "$HOME" ] && HOME="$(pwd)"
 
 # read external izsynth config file (used for service API and external variables override)
-IZSYNTH_CONFIG_DIR="$HOME/.config/$NAME"
+: ${IZSYNTH_CONFIG_DIR:="$HOME/.config/$NAME"}
 IZSYNTH_CONFIG_FILE="$IZSYNTH_CONFIG_DIR/$NAME.conf"
 
 # make default izsynth config directory if not exist
@@ -401,7 +401,7 @@ tts_engine_voicerss() {
                 echo "Get the VoiceRSS API KEY from: http://www.voicerss.org/personel"
                 echo "and put the following variable info '$IZSYNTH_CONFIG_FILE' config file:"
                 echo
-                echo "TTS_ENGINE_ISPEECH_TTS_ENGINE_VOICERSS_APIKEY=\"1234567890abcdefghilmnopqtwxyz\""
+                echo "TTS_ENGINE_VOICERSS_APIKEY=\"1234567890abcdefghilmnopqtwxyz\""
                 ;;
         env)
                 # default output file format
@@ -1038,7 +1038,7 @@ print_help_config() {
   echo "ERROR: Wrong or missing $NAME user config file.
 
 Step 1: Create this file: $IZSYNTH_CONFIG_FILE (use the command $0 -C)
-Step 2: Put into all variables you want override from the main script
+Step 2: Modify variables values you want to override from the default
 Step 3: $TTS_ENGINE engine specific config and variables:
 "
   tts_engine_$TTS_ENGINE help
@@ -1391,6 +1391,7 @@ print_fullname() {
 }
 
 print_name() {
+  #print_fullname $(echo ${@%.*})
   print_fullname $(echo ${@%.*}) | sed 's/\..*$//g'
 }
 
