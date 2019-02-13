@@ -14,8 +14,8 @@
 # script variables
 NAME="izsynth"
 DESCRIPTION="TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems"
-VERSION="4.9"
-VERSION_DATE="20181114"
+VERSION="5.0"
+VERSION_DATE="20190213"
 
 #####################################
 ## default suggested user variables to change 
@@ -472,7 +472,7 @@ tts_engine_naturalreaders() {
 
   case $ACTION in
 	description)
-		echo "2017-09-08 Remote NaturalReader NO Custom http://www.naturalreaders.com"
+		echo "2019-02-13 Remote NaturalReader NO Custom http://www.naturalreaders.com"
 		;;
 	help)
 		echo "No help available for $TTS_ENGINE"
@@ -488,68 +488,76 @@ tts_engine_naturalreaders() {
 		;;
 	voices)
 		# extractor command:
-		# curl -s https://www.naturalreaders.com/online/main.bc6d1a3c4945c5af706b.bundle.js | uglifyjs --beautify | grep ", this.premiumVoices.push(n), " | sed 's/this.premiumVoices.push(n), /'\\\n'/g' | sed -e 's/^[ \t]*//' | sed '/^$/d' | awk -F'[()]' '{print $2}' | sed 's/"//g' | sed 's/ //g' | sort | uniq | awk -F, '{print $2" "$1" "$3" "$4}' | sort | column -c1 -t
-		# extracted on 2017-09-08
-		echo "de-DE  Klara     att    6
-de-DE  Klaus     aca    28
-de-DE  Petra     apple  11
-de-DE  Reiner    att    5
-de-DE  Sarah     aca    35
-de-DE  Yannick   apple  12
-en-GB  Audrey    att    3
-en-GB  Charles   att    2
-en-GB  Daniel    apple  3
-en-GB  Graham    aca    25
-en-GB  Peter     aca    31
-en-GB  Rachel    aca    32
-en-GB  Serena    apple  4
-en-US  Ava       apple  1
-en-US  Mike      att    1
-en-US  Rod       aca    41
-en-US  Ryan      aca    33
-en-US  Samantha  apple  2
-en-US  Sharon    aca    42
-en-US  Tom       apple  0
-en-US  Tracy     aca    37
-es-CA  Jorge     apple  8
-es-ES  Alberto   att    19
-es-ES  Monica    apple  7
-es-ES  Rosa      att    20
-es-MX  Juan      apple  5
-es-MX  Paulina   apple  6
-fr-CA  Chantal   apple  10
-fr-CA  Louice    aca    43
-fr-CA  Nicolas   apple  9
-fr-FR  Alain     att    7
-fr-FR  Alice     aca    21
-fr-FR  Bruno     aca    22
-fr-FR  Juliette  att    8
-it-IT  Chiara    aca    23
-it-IT  Federica  apple  14
-it-IT  Luca      apple  13
-it-IT  Vittorio  aca    36
-nl-NL  Claire    apple  21
-pt-BR  Felip     apple  15
-pt-BR  Luciana   apple  16
-pt-PT  Catarina  apple  17
-pt-PT  Celia     aca    44
-pt-PT  Joana     apple  18
-sv-SE  Alva      apple  19
-sv-SE  Emma      aca    45
-sv-SE  Erik      aca    46
-sv-SE  Oskar     apple  20"
+		## setup
+		# npm -g install js-beautify
+
+		## extract voices list
+                # curl -s https://www.naturalreaders.com/online/main.9dc28aee981ea86ef48d.js | js-beautify | grep "return this.premiumVoices.length > 0 ? this.premiumVoices : (e = new Pt(" | sed 's/return this.premiumVoices.length > 0 ? this.premiumVoices : (e = new Pt(//' | sed 's/), this.premiumVoices.push(e), e = new Pt(/\n/g' | sed 's/), this.premiumVoices.push(e), this.premiumVoices);//' | sed 's/"//g' | awk -F, '{print $2" "$1" "$3" "$4}' | sort | column -c1 -t
+		# extracted on 2019-02-13
+		echo "de-DE  Bertha     mac  11
+de-DE  Jakob      mac  12
+de-DE  Klara      att  6
+de-DE  Klaus      aca  7
+de-DE  Reiner     att  5
+de-DE  Sarah      aca  14
+en-GB  Audrey     att  3
+en-GB  Charles    att  2
+en-GB  Darren     mac  3
+en-GB  Graham     aca  4
+en-GB  Peter      aca  10
+en-GB  Rachel     aca  11
+en-GB  Selene     mac  4
+en-US  Amanda     mac  1
+en-US  Mike       att  1
+en-US  Rod        aca  20
+en-US  Ryan       aca  12
+en-US  Sharon     aca  21
+en-US  Susan      mac  2
+en-US  Tim        mac  0
+en-US  Tracy      aca  16
+es-CA  Joaquin    mac  8
+es-ES  Alberto    att  19
+es-ES  Paula      mac  7
+es-ES  Rosa       att  20
+es-MX  Camila     mac  6
+es-MX  Diego      mac  5
+fr-CA  Emmanuel   mac  9
+fr-CA  Louice     aca  22
+fr-CA  Marie      mac  10
+fr-FR  Alain      att  7
+fr-FR  Alice      aca  0
+fr-FR  Bruno      aca  1
+fr-FR  Juliette   att  8
+it-IT  Chiara     aca  2
+it-IT  Mario      mac  13
+it-IT  Valentina  mac  14
+it-IT  Vittorio   aca  15
+nl-NL  Anika      mac  21
+nl-NL  Markus     mac  22
+pt-BR  Renata     mac  16
+pt-PT  Andrea     mac  18
+pt-PT  Celia      aca  23
+pt-PT  Julieta    mac  17
+sv-SE  Emma       aca  24
+sv-SE  Erik       aca  25
+sv-SE  Gus        mac  20
+sv-SE  Maja       mac  19"
 		;;
         voice)
 		eval ${FUNCNAME} voices 2>&1 | grep -i -F -w -- "$VOICE" | head -n1 | tr -d [:cntrl:] | awk '{print $4}'
                 ;;
 	synthesize)
-		local TTS_STRING_CONTENT="$(urlencode "$(cat "$IN" | parse_tts_string)")"
+		#local TTS_STRING_CONTENT="$(urlencode "$(cat "$IN" | parse_tts_string)")"
+		local TTS_STRING_CONTENT="$(cat "$IN" | parse_tts_string)"
 		local TTS_SPEED=1
 		local TTS_VOICE="$(eval ${FUNCNAME} voice $VOICE)"
 		local TTS_TYPE="$(eval ${FUNCNAME} voices 2>&1 | grep -i -F -w -- "$VOICE" | head -n1 | tr -d [:cntrl:] | awk '{print $3}')"
 		case $TTS_TYPE in
-			aca|att) curl -s -G "http://api.naturalreaders.com/v0/tts/?t=$TTS_STRING_CONTENT&r=$TTS_VOICE&s=$TTS_SPEED" -o "$OUT" ;;
-			apple)   curl -s -G "http://api.naturalreaders.com/v4/tts/macspeak?apikey=b98x9xlfs54ws4k0wc0o8g4gwc0w8ss&src=pw&r=$TTS_VOICE&s=$TTS_SPEED&t=$TTS_STRING_CONTENT" -o "$OUT" ;;
+			aca|att|mac) curl -s "https://kfiuqykx63.execute-api.us-east-1.amazonaws.com/Dev/tts?r=${TTS_VOICE}&s=${TTS_SPEED}&l=0&v=${TTS_TYPE}" --data "{\"t\":\"$TTS_STRING_CONTENT\"}" -o "$OUT" ;;
+
+			# old 2017-09-08 release
+			#aca|att) curl -s -G "http://api.naturalreaders.com/v0/tts/?t=$TTS_STRING_CONTENT&r=$TTS_VOICE&s=$TTS_SPEED" -o "$OUT" ;;
+			#mac)   curl -s -G "http://api.naturalreaders.com/v4/tts/macspeak?apikey=b98x9xlfs54ws4k0wc0o8g4gwc0w8ss&src=pw&r=$TTS_VOICE&s=$TTS_SPEED&t=$TTS_STRING_CONTENT" -o "$OUT" ;;
 		esac
 
 		# deprecated old method
@@ -1987,6 +1995,9 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 
 # ChangeLog:
 # ============================================================================
+# 5.0 - 20190213
+# - Restored naturalreaders engine support
+
 # 4.9 - 20181114
 # - Implemented generic playback engine support. You can use -k to specify your playback command, and -K for the command options
 # - fix: when exporting pbx files doesn't rename 44khz.wav to mp3
