@@ -7,9 +7,6 @@ Author: Ugo Viti <ugo.viti@initzero.it>
 izSynth is a bash script running under Linux, written to automate the synthesis of voices used into izPBX System or for realtime TTS (Text To Speech) used into Home Automation solutions.
 It can use offline synthesis software like Loquendo (using the Wine environment), eSpeak, Festival, VoiceRSS, NaturalReaders, and other popular online web TTS services to synthesize audio voices from ASCII text files and automatically merging the audio with background music (mp3 and wav format are supported), adding silences and fade in and out.
 
-
-For the official site and latest stable version: http://www.initzero.it/products/opensource/izsynth
-
 Follow and contribute the development on GitHub: https://github.com/ugoviti/izsynth
 
 ## Key Features
@@ -44,7 +41,7 @@ For windows sapi5 support, install the `wine` package and download sapi2wav.exe:
 
 **Stable Release**
 
-Download latest stable version of izSynth package from http://www.initzero.it/products/opensource/izsynth and uncrompress it into a system binary PATH, ex. `/usr/local/bin`
+Download latest stable version of izSynth package from https://github.com/ugoviti/izsynth/releases and uncrompress it into a system binary PATH, ex. `/usr/local/bin`
 
 **Development Release**
 
@@ -69,7 +66,7 @@ Make a quick test with the following command:
 
 **izSynth is configurable in 3 ways:**
 
-* From command line specifying the options ('izsynth -h' to list available options or 'izsynth -E' for example usage)
+* From command line specifying the options (`izsynth -h` to list available options or `izsynth -E` for example usage)
 * Using an external config file for overriding the izsynth variables (suggested method)
 * Modifying the variables on the izsynth script itself (not suggested)
 
@@ -100,7 +97,7 @@ izsynth allow for example to put a background music in every synthesized file, o
 
 Use the **-W** switch to change the output volume of the hardware sound card:
 
-`script://izsynth -W 90 -t "Can you hear me now?"`
+`izsynth -W 90 -t "Can you hear me now?"`
 
 If you found the correct audio volume, I suggest to modify the config file, so you don't need to specify the -W switch every time:
 
