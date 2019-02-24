@@ -18,7 +18,7 @@ VERSION="5.0"
 VERSION_DATE="20190213"
 
 #####################################
-## default suggested user variables to change 
+## default suggested user variables to change
 ## you can put these variables into $HOME/.config/izsynth/izsynth.conf to override the script variables
 
 # default TTS engine
@@ -769,7 +769,7 @@ tts_engine_sapi5() {
 	synthesize)
                 # convert utf-8 text file to iso-8859-15
                 local IN_FILE_ISO8859="$TMP_DIR/$(basename "$IN")"
-                iconv --to-code ISO-8859-15 "$IN" -o "$IN_ISO8859" 
+                iconv --to-code ISO-8859-15 "$IN" -o "$IN_ISO8859"
 
 		sapi2wav.exe "$OUT" "$(eval ${FUNCNAME} voice $VOICE)" -f "$IN_ISO8859" 2>&1 | grep -v "wineboot.exe"
 		;;
@@ -873,13 +873,13 @@ write_default_config() {
 echo "# ENGINE SPECIFIC API KEYS
 #TTS_ENGINE_VOICERSS_APIKEY=\"$TTS_ENGINE_VOICERSS_APIKEY\"
 #TTS_ENGINE_ISPEECH_APIKEY=\"$TTS_ENGINE_ISPEECH_APIKEY\"
- 
+
 # default tts engine
 TTS_ENGINE=\"$TTS_ENGINE\"
- 
+
 # default tts voice (null = let tts engine to set default voice. it will use english)
 TTS_VOICE=\"$TTS_VOICE\"
- 
+
 # resynth the file if it already exist
 OUTPUT_OVERWRITE=\"$OUTPUT_OVERWRITE\"
 
@@ -897,43 +897,43 @@ EXPORT_AUDIO_FORMAT_SUBDIR=\"$EXPORT_AUDIO_FORMAT_SUBDIR\"
 
 # realtime audio playback variables
 PLAYBACK=\"$PLAYBACK\"
- 
+
 # play the file in background, otherwise foreground
 PLAYBACK_BACKGROUND=\"$PLAYBACK_BACKGROUND\"
 
 # command used to play the synthesized audio file
 PLAYBACK_ENGINE=\"$PLAYBACK_ENGINE\"
- 
+
 # default playback command options
 PLAYBACK_ENGINE_OPTS=\"$PLAYBACK_ENGINE_OPTS\"
- 
+
 # default playback device
 PLAYBACK_DEVICE=\"$PLAYBACK_DEVICE\"
- 
+
 # sound card playback volume
 PLAYBACK_VOLUME=\"$PLAYBACK_VOLUME\"
- 
+
 # default base temp directory (comment if you want use the system default directory base, ex. /tmp)
 TMP_DIR_BASE=\"$TMP_DIR_BASE\"
- 
+
 # default redirect to tmp dir
 OUT_DIR=\"$TMP_DIR_BASE\"
- 
+
 # default tts volume
 TTS_VOLUME=\"$TTS_VOLUME\"
- 
+
 # default wait n. seconds before speaking tts
 TTS_PAD_BEGIN=\"$TTS_PAD_BEGIN\"
- 
+
 # default wait n. seconds after speaked tts
 TTS_PAD_END=\"$TTS_PAD_END\"
- 
+
 # default start music after n. seconds
 MUSIC_START=\"$MUSIC_START\"
- 
+
 # default fade the start and end of music with 5 seconds
 MUSIC_FADE=\"$MUSIC_FADE\"
- 
+
 # default music volume
 MUSIC_VOLUME=\"$MUSIC_VOLUME\"
 " > "$IZSYNTH_CONFIG_FILE"
@@ -960,7 +960,7 @@ tts_engines_list(){
 
 # verify if the specified TTS engine exist
 tts_engines_check() {
-  if [ -z "$1" ] || [ -z "$(tts_engines_list | grep -w "$1")" ] 
+  if [ -z "$1" ] || [ -z "$(tts_engines_list | grep -w "$1")" ]
     then
  	echo "ERROR: wrong TTS engine synthesizer specified: '$1'"
 	echo
@@ -972,7 +972,7 @@ tts_engines_check() {
 }
 
 tts_engines_check_voice() {
-  if [ -z "$2" ] || [ -z "$(tts_engine_$1 voice $2)" ] 
+  if [ -z "$2" ] || [ -z "$(tts_engine_$1 voice $2)" ]
     then
 	echo "ERROR: the TTS voice '$2' doesn't exist, or is not supported by the engine '$1'"
 	echo
@@ -1024,7 +1024,7 @@ urlencode() {
         local c="${1:i:1}"
         case $c in
             [a-zA-Z0-9.~_-]) printf "$c" ;;
-            *) printf '%%%02X' "'$c" ;; 
+            *) printf '%%%02X' "'$c" ;;
         esac
     done
 }
@@ -1107,7 +1107,7 @@ synthesize_file() {
   shift
   local OUT="$1"
 
-  # tts_engine_* destination_file 
+  # tts_engine_* destination_file
   echo -e -n "Synthesizing - input:[$IN] engine:[${TTS_ENGINE[$ID]}] voice:["${TTS_VOICE[$ID]}"] output:[$OUT] "
 
   tts_engine_${TTS_ENGINE[$ID]} synthesize "${TTS_VOICE[$ID]}" "$IN" "$OUT"
@@ -1163,7 +1163,7 @@ convert_file() {
   local IN="$1"
   shift
   local OUT="$1"
- 
+
   case "$(print_ext $IN)" in
    mp3)
     echo -e -n "Converting   - input:[$IN] input_size:[$(show_size "$IN")] "
@@ -1237,7 +1237,7 @@ export_file() {
                         ;;
       esac
 
-      # overwrite only if input and output file are not the same 
+      # overwrite only if input and output file are not the same
       if [[ "$IN" != "$OUT" ]] && [[ ! -e "$OUT" || "$OUTPUT_OVERWRITE" = "yes" ]]; then
         # convert to pbx formats
         sox -V1 $SOX_OPTS "$IN" $SOX_OPTS_FORMAT "$OUT" lowpass 4000
@@ -1383,7 +1383,7 @@ split_tts_file() {
    TTS_VOICE[$SID]="${TTS_VOICE[$ID]}"
    local IN_FILE_SPLIT_TMP="$TMP_DIR/$(print_name "$IN")-$SID.$(print_ext "$IN")"
    IN_FILE_SPLIT+=($IN_FILE_SPLIT_TMP)
-   #echo -e -n "$IN_FILE_SPLIT_TMP " ; echo $string 
+   #echo -e -n "$IN_FILE_SPLIT_TMP " ; echo $string
    echo $string > "$IN_FILE_SPLIT_TMP"
   done < <(echo -e -n "$(cat "$IN" | parse_tts_string | fold -sw $TTS_LENGTH)\n")
   #debug
@@ -1416,7 +1416,7 @@ IN_FILE ARRAY ALL VALUES  = ${IN_FILE[@]}
 IN_FILE_MEGAMIX ARRAY FIRST VALUE = $IN_FILE_MEGAMIX'
 IN_FILE_MEGAMIX ARRAY ALL VALUES  = ${IN_FILE_MEGAMIX[@]}
 
-other variables: 
+other variables:
 ================
      TMP_DIR = $TMP_DIR
          PWD = $PWD
@@ -1723,7 +1723,7 @@ $NAME -i naturalreaders:Luca:txt/it/company-it-welcome.txt -i voicerss:en-gb:txt
 usage(){
   local progname=$0
   echo "$NAME - $DESCRIPTION
-Written by Ugo Viti <ugo.viti@initzero.it>
+written by Ugo Viti <ugo.viti@initzero.it>
 version: $VERSION released: $VERSION_DATE
 
 usage: $progname [options]
@@ -1892,7 +1892,7 @@ while getopts "t:i:o:m:S:p:P:F:M:T:e:v:d:k:K:W:X:slLrxwbBDChHEV" option ; do
          done
 	 # list all user custom software devices
 	 cat $HOME/.asoundrc 2>/dev/null | grep ^pcm | awk '{print "alsa:device="$1}' | sed 's/pcm.//'
-	} 
+	}
         list_playback_devices | column -c1 -t
 
 	exit 0
@@ -1961,17 +1961,17 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 # ============================================================================
 # Written by: Ugo Viti <ugo.viti@initzero.it>
 # visit http://www.initzero.it for commercial support
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # ============================================================================

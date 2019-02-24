@@ -66,7 +66,7 @@ Make a quick test with the following command:
 
 **izSynth is configurable in 3 ways:**
 
-* From command line specifying the options (`izsynth -h` to list available options or `izsynth -E` for example usage)
+* From command line specifying the options (`izsynth -h` to list available options or `izsynth -E` for usage examples)
 * Using an external config file for overriding the izsynth variables (suggested method)
 * Modifying the variables on the izsynth script itself (not suggested)
 
