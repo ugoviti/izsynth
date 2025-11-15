@@ -21,7 +21,7 @@ The script uses a function-based plugin architecture with two main types:
 **TTS Engines** (lines 115-784):
 - Each engine is a bash function: `tts_engine_<name>()`
 - Supported actions: `description`, `help`, `env`, `commands`, `voices`, `voice`, `synthesize`
-- Built-in engines: ispeech, google-translate, google-tts, voicerss, naturalreaders, fromtexttospeech, festival, espeak, sapi5
+- Built-in engines: ispeech, google-translate, gemini-tts, voicerss, naturalreaders, fromtexttospeech, festival, espeak, sapi5
 - External engines can be added via `$HOME/.config/izsynth/engines/*.conf`
 
 **Playback Engines** (lines 788-868):
@@ -130,14 +130,14 @@ chmod +x izsynth
 - Input format: `-i engine:voice:file.txt`
 - Example: `-i naturalreaders:Luca:it.txt -i voicerss:en-gb:en.txt`
 
-### Google TTS Engine (google-tts)
+### Gemini TTS Engine (gemini-tts)
 **New in 2025**: High-quality cloud TTS with Neural2 and Chirp3 voices.
 
 **Setup:**
 1. Create Google Cloud project at console.cloud.google.com
 2. Enable Cloud Text-to-Speech API
 3. Create API key in: APIs & Services > Credentials
-4. Add to config: `TTS_ENGINE_GOOGLE_TTS_APIKEY="your-api-key"`
+4. Add to config: `TTS_ENGINE_GEMINI_TTS_APIKEY="your-api-key"`
 
 **Features:**
 - Output format: MP3 (efficient, high quality)
@@ -149,16 +149,16 @@ chmod +x izsynth
 **Usage:**
 ```bash
 # Show help and setup instructions
-./izsynth -e google-tts -H
+./izsynth -e gemini-tts -H
 
 # List all available voices (requires API key)
-./izsynth -e google-tts -l
+./izsynth -e gemini-tts -l
 
 # Synthesize Italian text with Chirp3 voice
-./izsynth -e google-tts -v it-IT-Chirp3-HD-Leda -t "Benvenuto!"
+./izsynth -e gemini-tts -v it-IT-Chirp3-HD-Leda -t "Benvenuto!"
 
 # English with Neural2 voice
-./izsynth -e google-tts -v en-US-Neural2-C -t "Hello world"
+./izsynth -e gemini-tts -v en-US-Neural2-C -t "Hello world"
 ```
 
 **Implementation notes:**

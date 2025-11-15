@@ -382,7 +382,7 @@ zu-ZA        Zulu (South Africa)"
 }
 
 
-tts_engine_google_tts() {
+tts_engine_gemini_tts() {
   local ACTION="$1"
   shift
   local VOICE="$1"
@@ -393,7 +393,7 @@ tts_engine_google_tts() {
 
   case $ACTION in
         description)
-                echo "2025-11-15 Remote Google-TTS YES Google https://cloud.google.com/text-to-speech"
+                echo "2025-11-15 Remote Gemini-TTS YES Google https://cloud.google.com/text-to-speech"
                 ;;
         help)
                 echo "Get the Google Cloud Text-to-Speech API KEY from:"
@@ -405,7 +405,7 @@ tts_engine_google_tts() {
                 echo
                 echo "Then put the following variable into '$IZSYNTH_CONFIG_FILE' config file:"
                 echo
-                echo "TTS_ENGINE_GOOGLE_TTS_APIKEY=\"your-api-key-here\""
+                echo "TTS_ENGINE_GEMINI_TTS_APIKEY=\"your-api-key-here\""
                 ;;
         env)
                 # default output file format (MP3 is more efficient than LINEAR16)
@@ -421,8 +421,8 @@ tts_engine_google_tts() {
                 ;;
         voices)
 		# Try to fetch voices dynamically from API
-		if [ ! -z "$TTS_ENGINE_GOOGLE_TTS_APIKEY" ]; then
-		  local VOICES_JSON=$(curl -s -X GET "https://texttospeech.googleapis.com/v1/voices?key=$TTS_ENGINE_GOOGLE_TTS_APIKEY" 2>/dev/null)
+		if [ ! -z "$TTS_ENGINE_GEMINI_TTS_APIKEY" ]; then
+		  local VOICES_JSON=$(curl -s -X GET "https://texttospeech.googleapis.com/v1/voices?key=$TTS_ENGINE_GEMINI_TTS_APIKEY" 2>/dev/null)
 
 		  # Check for API errors first
 		  if echo "$VOICES_JSON" | grep -q '"error"'; then
@@ -507,7 +507,7 @@ ja-JP-Neural2-C         ja-JP     MALE" | column -t
                 local TTS_VOICE="$(eval ${FUNCNAME} voice $VOICE)"
 
                 # Check if API key is configured
-                [ -z "$TTS_ENGINE_GOOGLE_TTS_APIKEY" ] && echo && print_help_config && exit 1
+                [ -z "$TTS_ENGINE_GEMINI_TTS_APIKEY" ] && echo && print_help_config && exit 1
 
                 # Extract language code from voice name (e.g., en-US-Neural2-C -> en-US)
                 local LANGUAGE_CODE=$(echo "$TTS_VOICE" | grep -o '^[a-z][a-z]-[A-Z][A-Z]')
@@ -538,7 +538,7 @@ EOF
                 curl -s -X POST \
                   -H "Content-Type: application/json" \
                   --data "$JSON_REQUEST" \
-                  "https://texttospeech.googleapis.com/v1/text:synthesize?key=$TTS_ENGINE_GOOGLE_TTS_APIKEY" \
+                  "https://texttospeech.googleapis.com/v1/text:synthesize?key=$TTS_ENGINE_GEMINI_TTS_APIKEY" \
                   -o "$TMP_RESPONSE"
 
                 # Check for API errors first
@@ -2218,7 +2218,7 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 # ChangeLog:
 # ============================================================================
 # 5.1.0 - 20251115
-# - Added Google Cloud Text-to-Speech API engine (google-tts)
+# - Added Google Cloud Text-to-Speech API engine (gemini-tts)
 #   - Support for Neural2, Chirp3 HD, and Studio voices
 #   - MP3 output format for efficiency
 #   - 5000 bytes character limit with auto-splitting support
@@ -2227,9 +2227,9 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 #   - Base64 JSON response decoding with jq/grep fallback
 # - Renamed engines for clarity:
 #   - google → google-translate (free Google Translate TTS, 160 char limit)
-#   - google-cloud-tts → google-tts (premium Cloud TTS API)
+#   - google-cloud-tts → gemini-tts (premium Cloud TTS API)
 # - Added automatic hyphen-to-underscore conversion for engine names
-#   - Users can use -e google-tts (converts to google_tts internally)
+#   - Users can use -e gemini-tts (converts to gemini_tts internally)
 # - Implemented semantic versioning (X.Y.Z format)
 # - Updated author contact information
 
