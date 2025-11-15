@@ -216,7 +216,7 @@ usspanishmale        US Spanish Male"
 }
 
 
-tts_engine_google() {
+tts_engine_google_translate() {
   local ACTION="$1"
   shift
   local VOICE="$1"
@@ -227,7 +227,7 @@ tts_engine_google() {
 
   case $ACTION in
         description)
-                echo "2017-09-09 Remote GoogleVoice NO Google http://translate.google.com"
+                echo "2017-09-09 Remote Google-Translate NO Google http://translate.google.com"
                 ;;
         help)
                 echo "this engine is limited to 160 chars max"
@@ -374,6 +374,229 @@ zu-ZA        Zulu (South Africa)"
                 local TTS_STRING_CONTENT="$(urlencode "$(cat "$IN" | parse_tts_string)")"
                 local TTS_VOICE="$(eval ${FUNCNAME} voice $VOICE)"
                 curl -s -G "http://translate.google.com/translate_tts?ie=UTF-8&total=1&idx=0&client=tw-ob&&tl=$TTS_VOICE&q=$TTS_STRING_CONTENT" -A "Mozilla" --compressed -o "$OUT"
+                ;;
+        *)
+                echo "${FUNCNAME}: wrong method called - abort"
+                exit 1
+                ;;
+  esac
+}
+
+
+tts_engine_google_tts() {
+  local ACTION="$1"
+  shift
+  local VOICE="$1"
+  shift
+  local IN="$1"
+  shift
+  local OUT="$1"
+
+  case $ACTION in
+        description)
+                echo "2025-11-15 Remote Google-TTS YES Google https://cloud.google.com/text-to-speech"
+                ;;
+        help)
+                echo "Get the Google Cloud Text-to-Speech API KEY from:"
+                echo "1. Go to: https://console.cloud.google.com"
+                echo "2. Create/select a project and enable billing (free tier: 60 min/month)"
+                echo "3. Enable the Cloud Text-to-Speech API"
+                echo "4. Go to: APIs & Services > Credentials"
+                echo "5. Click 'Create Credentials' > 'API Key'"
+                echo
+                echo "Then put the following variable into '$IZSYNTH_CONFIG_FILE' config file:"
+                echo
+                echo "TTS_ENGINE_GOOGLE_TTS_APIKEY=\"your-api-key-here\""
+                ;;
+        env)
+                # default output file format (MP3 is more efficient than LINEAR16)
+                TTS_EXT="mp3"
+		# default max allowed bytes (API hard limit)
+		TTS_LENGTH="5000"
+                # default TTS voice and language
+                [ -z "$TTS_LANGUAGE" ] && TTS_LANGUAGE="en-US"
+                [ -z "$TTS_VOICE" ] && TTS_VOICE="en-US-Neural2-C"
+                ;;
+        commands)
+                echo "curl base64"
+                ;;
+        voices)
+		# Try to fetch voices dynamically from API
+		if [ ! -z "$TTS_ENGINE_GOOGLE_TTS_APIKEY" ]; then
+		  local VOICES_JSON=$(curl -s -X GET "https://texttospeech.googleapis.com/v1/voices?key=$TTS_ENGINE_GOOGLE_TTS_APIKEY" 2>/dev/null)
+
+		  # Check for API errors first
+		  if echo "$VOICES_JSON" | grep -q '"error"'; then
+		    echo "ERROR: Google Cloud API returned an error:"
+		    echo
+		    if command -v jq >/dev/null 2>&1; then
+		      echo "$VOICES_JSON" | jq -r '.error.message' 2>/dev/null
+		      local ERROR_REASON=$(echo "$VOICES_JSON" | jq -r '.error.details[0].reason' 2>/dev/null)
+		    else
+		      echo "$VOICES_JSON" | grep -o '"message":"[^"]*"' | head -1 | sed 's/"message":"\([^"]*\)"/\1/'
+		      local ERROR_REASON=$(echo "$VOICES_JSON" | grep -o '"reason":"[^"]*"' | head -1 | sed 's/"reason":"\([^"]*\)"/\1/')
+		    fi
+		    echo
+
+		    # Show specific help based on error type
+		    if [ "$ERROR_REASON" = "API_KEY_SERVICE_BLOCKED" ]; then
+		      echo "The Cloud Text-to-Speech API is not enabled for this project."
+		      echo
+		      echo "To enable the API:"
+		      echo "1. Go to: https://console.cloud.google.com/apis/library/texttospeech.googleapis.com"
+		      echo "2. Select your project"
+		      echo "3. Click 'ENABLE' button"
+		      echo "4. Wait a few minutes for the API to be activated"
+		    else
+		      echo "Please check:"
+		      echo "1. Your API key is correct"
+		      echo "2. The Cloud Text-to-Speech API is enabled for your project"
+		      echo "3. Billing is enabled (required for Google Cloud APIs)"
+		      echo
+		      echo "Visit: https://console.cloud.google.com/apis/library/texttospeech.googleapis.com"
+		    fi
+		    return 1
+		  fi
+
+		  # Check if we have jq available for better JSON parsing
+		  if command -v jq >/dev/null 2>&1; then
+		    echo "$VOICES_JSON" | jq -r '.voices[] | "\(.name) \(.languageCodes[0]) \(.ssmlGender)"' 2>/dev/null | column -t
+		  else
+		    # Fallback to grep/sed parsing
+		    echo "$VOICES_JSON" | grep -o '"name":"[^"]*","languageCodes":\["[^"]*"\],"ssmlGender":"[^"]*"' | \
+		      sed 's/"name":"\([^"]*\)","languageCodes":\["\([^"]*\)"\],"ssmlGender":"\([^"]*\)"/\1 \2 \3/' | column -t
+		  fi
+
+		  # If API call failed, show fallback message
+		  if [ -z "$VOICES_JSON" ] || [ "$VOICES_JSON" = "null" ]; then
+		    echo "Error: Could not fetch voices from API. Check your API key."
+		    echo "Use: izsynth -e google-cloud-tts -H for help setting up the API key"
+		  fi
+		else
+		  echo "API KEY not configured. Common voices (partial list):"
+		  echo
+		  echo "Name                    Language  Gender"
+		  echo "----------------------  --------  -------"
+		  # Hardcoded fallback list with most common voices
+		  echo "en-US-Neural2-A         en-US     MALE
+en-US-Neural2-C         en-US     FEMALE
+en-US-Neural2-D         en-US     MALE
+en-US-Neural2-E         en-US     FEMALE
+en-US-Neural2-F         en-US     FEMALE
+en-GB-Neural2-A         en-GB     FEMALE
+en-GB-Neural2-B         en-GB     MALE
+it-IT-Neural2-A         it-IT     FEMALE
+it-IT-Neural2-C         it-IT     MALE
+it-IT-Chirp3-HD-Leda    it-IT     FEMALE
+fr-FR-Neural2-A         fr-FR     FEMALE
+fr-FR-Neural2-B         fr-FR     MALE
+de-DE-Neural2-A         de-DE     FEMALE
+de-DE-Neural2-B         de-DE     MALE
+es-ES-Neural2-A         es-ES     FEMALE
+es-ES-Neural2-B         es-ES     MALE
+ja-JP-Neural2-B         ja-JP     FEMALE
+ja-JP-Neural2-C         ja-JP     MALE" | column -t
+		  echo
+		  echo "Configure API KEY to see full list: izsynth -e google-cloud-tts -H"
+		fi
+                ;;
+        voice)
+                eval ${FUNCNAME} voices 2>&1 | grep -i -F -w -- "$VOICE" | head -n1 | awk '{print $1}'
+                ;;
+        synthesize)
+                local TTS_STRING_CONTENT="$(cat "$IN" | parse_tts_string)"
+                local TTS_VOICE="$(eval ${FUNCNAME} voice $VOICE)"
+
+                # Check if API key is configured
+                [ -z "$TTS_ENGINE_GOOGLE_TTS_APIKEY" ] && echo && print_help_config && exit 1
+
+                # Extract language code from voice name (e.g., en-US-Neural2-C -> en-US)
+                local LANGUAGE_CODE=$(echo "$TTS_VOICE" | grep -o '^[a-z][a-z]-[A-Z][A-Z]')
+                [ -z "$LANGUAGE_CODE" ] && LANGUAGE_CODE="$TTS_LANGUAGE"
+
+                # Build JSON request
+                local JSON_REQUEST=$(cat <<EOF
+{
+  "input": {
+    "text": $(echo "$TTS_STRING_CONTENT" | sed 's/"/\\"/g' | awk '{printf "\"%s\"", $0}')
+  },
+  "voice": {
+    "languageCode": "$LANGUAGE_CODE",
+    "name": "$TTS_VOICE"
+  },
+  "audioConfig": {
+    "audioEncoding": "MP3",
+    "pitch": 0,
+    "speakingRate": 1
+  }
+}
+EOF
+)
+
+                # Make API call and extract audio content
+                local TMP_RESPONSE="/tmp/gcloud_tts_response_$$.json"
+
+                curl -s -X POST \
+                  -H "Content-Type: application/json" \
+                  --data "$JSON_REQUEST" \
+                  "https://texttospeech.googleapis.com/v1/text:synthesize?key=$TTS_ENGINE_GOOGLE_TTS_APIKEY" \
+                  -o "$TMP_RESPONSE"
+
+                # Check for API errors first
+                if grep -q '"error"' "$TMP_RESPONSE"; then
+                  echo "ERROR: Google Cloud API returned an error:"
+                  echo
+                  if command -v jq >/dev/null 2>&1; then
+                    echo "$( cat "$TMP_RESPONSE" | jq -r '.error.message' 2>/dev/null )"
+                    local ERROR_REASON=$(cat "$TMP_RESPONSE" | jq -r '.error.details[0].reason' 2>/dev/null)
+                  else
+                    grep -o '"message":"[^"]*"' "$TMP_RESPONSE" | head -1 | sed 's/"message":"\([^"]*\)"/\1/'
+                    local ERROR_REASON=$(grep -o '"reason":"[^"]*"' "$TMP_RESPONSE" | head -1 | sed 's/"reason":"\([^"]*\)"/\1/')
+                  fi
+                  echo
+
+                  # Show specific help based on error type
+                  if [ "$ERROR_REASON" = "API_KEY_SERVICE_BLOCKED" ]; then
+                    echo "The Cloud Text-to-Speech API is not enabled for this project."
+                    echo
+                    echo "To enable the API:"
+                    echo "1. Go to: https://console.cloud.google.com/apis/library/texttospeech.googleapis.com"
+                    echo "2. Select your project"
+                    echo "3. Click 'ENABLE' button"
+                    echo "4. Wait a few minutes for the API to be activated"
+                  else
+                    echo "Please check:"
+                    echo "1. Your API key is correct"
+                    echo "2. The Cloud Text-to-Speech API is enabled for your project"
+                    echo "3. Billing is enabled (required for Google Cloud APIs)"
+                    echo
+                    echo "Visit: https://console.cloud.google.com/apis/library/texttospeech.googleapis.com"
+                  fi
+                  rm -f "$TMP_RESPONSE"
+                  exit 1
+                fi
+
+                # Extract and decode audioContent
+                if command -v jq >/dev/null 2>&1; then
+                  # Use jq if available
+                  jq -r '.audioContent' "$TMP_RESPONSE" 2>/dev/null | base64 --decode > "$OUT"
+                else
+                  # Fallback to grep/sed
+                  grep -o '"audioContent":"[^"]*"' "$TMP_RESPONSE" | \
+                    sed 's/"audioContent":"\([^"]*\)"/\1/' | \
+                    base64 --decode > "$OUT"
+                fi
+
+                # Check if synthesis was successful
+                if [ ! -s "$OUT" ]; then
+                  echo "Error: Audio synthesis failed. Response:"
+                  cat "$TMP_RESPONSE"
+                  rm -f "$TMP_RESPONSE"
+                  exit 1
+                fi
+
+                # Clean up temporary response file
+                rm -f "$TMP_RESPONSE"
                 ;;
         *)
                 echo "${FUNCNAME}: wrong method called - abort"
@@ -1830,7 +2053,7 @@ while getopts "t:i:o:m:S:p:P:F:M:T:e:v:d:k:K:W:X:slLrxwbBDChHEV" option ; do
         TTS_VOLUME="${OPTARG}"
 	;;
     e) # use specified voice synthesizer engine
-        TTS_ENGINE="${OPTARG}"
+        TTS_ENGINE="${OPTARG//-/_}"
 	;;
     v) # use specified voice pack
         TTS_VOICE="${OPTARG}"
