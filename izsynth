@@ -2217,6 +2217,22 @@ trap "rm -rf "${TMP_DIR}" && exit 0 || exit 1" 0
 
 # ChangeLog:
 # ============================================================================
+# 5.1.0 - 20251115
+# - Added Google Cloud Text-to-Speech API engine (google-tts)
+#   - Support for Neural2, Chirp3 HD, and Studio voices
+#   - MP3 output format for efficiency
+#   - 5000 bytes character limit with auto-splitting support
+#   - Dynamic voice listing from API with fallback to static list
+#   - Comprehensive error handling with helpful setup messages
+#   - Base64 JSON response decoding with jq/grep fallback
+# - Renamed engines for clarity:
+#   - google → google-translate (free Google Translate TTS, 160 char limit)
+#   - google-cloud-tts → google-tts (premium Cloud TTS API)
+# - Added automatic hyphen-to-underscore conversion for engine names
+#   - Users can use -e google-tts (converts to google_tts internally)
+# - Implemented semantic versioning (X.Y.Z format)
+# - Updated author contact information
+
 # 5.0 - 20190213
 # - Restored naturalreaders engine support
 
