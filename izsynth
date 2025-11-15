@@ -14,8 +14,8 @@
 # script variables
 NAME="izsynth"
 DESCRIPTION="TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems"
-VERSION="5.0"
-VERSION_DATE="20190213"
+VERSION="5.1.0"
+VERSION_DATE="20251115"
 
 #####################################
 ## default suggested user variables to change
